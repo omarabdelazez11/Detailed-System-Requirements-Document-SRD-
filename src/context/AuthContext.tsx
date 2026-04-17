@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { auth, db } from '../services/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -17,15 +17,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      if (user) {
-        const docRef = doc(db, 'users', user.uid);
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (authUser) {
+        const docRef = doc(db, 'users', authUser.uid);
         const docSnap = await getDoc(docRef);
+        
         if (docSnap.exists()) {
-          setUserProfile(docSnap.data());
+          const profile = docSnap.data();
+          if (profile.status === 'Pending') {
+            // User is authenticated but account is not approved
+            setUser(null);
+            setUserProfile(null);
+            await signOut(auth); // Sign out if pending
+          } else {
+            setUser(authUser);
+            setUserProfile(profile);
+          }
+        } else {
+          // No profile found, probably just signed up and pending creation
+          setUser(null);
         }
       } else {
+        setUser(null);
         setUserProfile(null);
       }
       setLoading(false);
