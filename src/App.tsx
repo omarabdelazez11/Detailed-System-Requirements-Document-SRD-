@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
+import { bookingService } from './services/bookingService';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import AuthorityManagementPage from './pages/AuthorityManagementPage';
@@ -18,6 +19,11 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 };
 
 function App() {
+  // SEED INITIAL DATA
+  useEffect(() => {
+    bookingService.seedInitialData();
+  }, []);
+
   return (
     <AuthProvider>
       <SettingsProvider>
@@ -25,7 +31,6 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
-            {/* These are available via Dashboard switching but keeping routes for safety */}
             <Route path="/authority" element={<PrivateRoute><AuthorityManagementPage /></PrivateRoute>} />
             <Route path="/final-approvals" element={<PrivateRoute><ManagerApprovalPage /></PrivateRoute>} />
             <Route path="/" element={<Navigate to="/dashboard" />} />
