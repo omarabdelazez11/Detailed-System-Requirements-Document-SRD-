@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Check, X, Clock, Edit3, Lightbulb, MapPin, Filter, Calendar, Save, AlertTriangle, User, Hash } from 'lucide-react';
+import { Search, Check, X, Clock, Edit3, Lightbulb, MapPin, Filter, Calendar, Save, AlertTriangle, User, Hash, ArrowUpRight } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -42,7 +42,8 @@ const BookingRequestsPage: React.FC = () => {
     setRequests(requests.map(r => {
       if (r.id !== id) return r;
       if (action === 'Approve') {
-        if (isAdmin && r.type === 'Multi-Purpose' && r.requesterRole !== 'Admin') return { ...r, status: 'Awaiting Manager' };
+        // Admin approval for Multi-Purpose goes to Manager, but Manager approval is FINAL
+        if (isAdmin && r.type === 'Multi-Purpose' && r.requesterRole !== 'Admin' && !isManager) return { ...r, status: 'Awaiting Manager' };
         return { ...r, status: 'Approved' };
       }
       if (action === 'Suggest') return { ...r, status: 'Suggestion Sent' };
@@ -58,26 +59,26 @@ const BookingRequestsPage: React.FC = () => {
   });
 
   return (
-    <div className="card" style={{ padding: '2rem' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2.5rem' }}>
-        <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: 0 }}>
-          <Clock size={24} color="#3b82f6" /> Booking Control Center
+    <div className="card" style={{ padding: '2.5rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '3rem' }}>
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: 0, color: 'white' }}>
+          <Clock size={28} color="#3b82f6" /> Booking Control Center
         </h2>
 
         <div style={filterBar}>
           <div style={filterGroup}>
-             <Search size={16} color="#64748b" />
+             <Search size={18} color="#64748b" />
              <input placeholder="Search Staff or ID..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={searchInput} />
           </div>
           <div style={filterGroup}>
-            <MapPin size={16} color="#3b82f6" />
+            <MapPin size={18} color="#3b82f6" />
             <select value={roomFilter} onChange={e => setRoomFilter(e.target.value)} style={selectStyle}>
               <option value="All Rooms">All Rooms</option>
               {rooms.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
           <div style={filterGroup}>
-            <Filter size={16} color="#64748b" />
+            <Filter size={18} color="#64748b" />
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={selectStyle}>
               <option value="All">All Statuses</option>
               <option value="Pending">Pending</option>
@@ -92,50 +93,50 @@ const BookingRequestsPage: React.FC = () => {
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid #334155', color: '#94a3b8', fontSize: '0.8rem' }}>
-              <th style={{ padding: '1rem' }}>Requester Information</th>
-              <th style={{ padding: '1rem' }}>Location & Timing</th>
-              <th style={{ padding: '1rem' }}>Current Status</th>
-              <th style={{ padding: '1rem', textAlign: 'right' }}>Management</th>
+            <tr style={{ borderBottom: '1px solid #334155', color: '#64748b', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              <th style={{ padding: '1.25rem' }}>Requester Information</th>
+              <th style={{ padding: '1.25rem' }}>Location & Timing</th>
+              <th style={{ padding: '1.25rem' }}>Current Status</th>
+              <th style={{ padding: '1.25rem', textAlign: 'right' }}>Management Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredRequests.map(req => {
               const hasConflict = checkConflict(req) && (req.status === 'Pending' || req.status === 'Awaiting Manager');
-              const canModify = req.status === 'Approved' || req.status === 'Declined' || hasConflict;
+              const showDirectActions = (req.status === 'Pending' || req.status === 'Awaiting Manager');
               
               return (
-                <tr key={req.id} style={{ borderBottom: '1px solid #1e293b', background: hasConflict ? '#ef444405' : 'transparent' }}>
-                  <td style={{ padding: '1rem' }}>
-                    <div style={{ fontWeight: 'bold', color: 'white' }}>{req.requesterName}</div>
-                    <div style={{ fontSize: '0.7rem', color: '#64748b' }}># {req.id}</div>
+                <tr key={req.id} style={{ borderBottom: '1px solid #1e293b', transition: '0.2s', background: hasConflict ? '#ef444405' : 'transparent' }}>
+                  <td style={{ padding: '1.5rem 1.25rem' }}>
+                    <div style={{ fontWeight: 'bold', color: 'white', fontSize: '1rem' }}>{req.requesterName}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>{req.requesterRole} • ID: {req.id}</div>
                   </td>
-                  <td style={{ padding: '1rem' }}>
-                    <div style={{ fontSize: '0.9rem', color: hasConflict ? '#ef4444' : 'white', fontWeight: '500' }}>{req.room}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{req.date} • {req.time}</div>
+                  <td style={{ padding: '1.5rem 1.25rem' }}>
+                    <div style={{ fontSize: '0.95rem', color: hasConflict ? '#ef4444' : 'white', fontWeight: '600' }}>{req.room}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>{req.date} • {req.time}</div>
                   </td>
-                  <td style={{ padding: '1rem' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <td style={{ padding: '1.5rem 1.25rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <span style={{ 
-                        width: 'fit-content', padding: '4px 10px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold', 
-                        background: getStatusColor(req.status) + '22', color: getStatusColor(req.status) 
+                        width: 'fit-content', padding: '5px 12px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: '800', 
+                        background: getStatusColor(req.status) + '15', color: getStatusColor(req.status), textTransform: 'uppercase'
                       }}>
                         {req.status}
                       </span>
-                      {hasConflict && <span style={{ color: '#ef4444', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertTriangle size={12} /> Conflict</span>}
+                      {hasConflict && <span style={{ color: '#ef4444', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold' }}><AlertTriangle size={14} /> Schedule Conflict</span>}
                     </div>
                   </td>
-                  <td style={{ padding: '1rem', textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                      {((isAdmin && req.status === 'Pending' && req.requesterRole !== 'Admin') || (isManager && req.status === 'Awaiting Manager')) && (
+                  <td style={{ padding: '1.5rem 1.25rem', textAlign: 'right' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                      {showDirectActions && (
                         <>
-                          {!hasConflict && <button onClick={() => handleAction(req.id, 'Approve')} style={btnStyle('#22c55e')} title="Approve"><Check size={18} /></button>}
-                          <button onClick={() => setSuggestionReq(req)} style={btnStyle('#f59e0b')} title="Suggest Alternative"><Lightbulb size={18} /></button>
-                          <button onClick={() => handleAction(req.id, 'Decline')} style={btnStyle('#ef4444')} title="Decline"><X size={18} /></button>
+                          {!hasConflict && <button onClick={() => handleAction(req.id, 'Approve')} style={actionBtn('#22c55e')}><Check size={16} /> Approve</button>}
+                          <button onClick={() => setSuggestionReq(req)} style={actionBtn('#3b82f6')}><Lightbulb size={16} /> Suggest</button>
+                          <button onClick={() => handleAction(req.id, 'Decline')} style={actionBtn('#ef4444')}><X size={16} /> Decline</button>
                         </>
                       )}
-                      {(canModify || req.status === 'Pending' || req.status === 'Awaiting Manager') && (
-                        <button onClick={() => setEditingReq(req)} style={btnStyle('transparent', '#3b82f6')} title="Modify Request"><Edit3 size={18} /></button>
+                      {!showDirectActions && (
+                        <button onClick={() => setEditingReq(req)} style={editBtn}><Edit3 size={16} /> Modify Details</button>
                       )}
                     </div>
                   </td>
@@ -146,32 +147,35 @@ const BookingRequestsPage: React.FC = () => {
         </table>
       </div>
 
-      {/* MODALS (Suggest & Edit) ... same as previous version */}
+      {/* MODALS (Suggest & Edit) */}
       {suggestionReq && (
         <div style={modalOverlay}><div style={modalCard}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-            <h3 style={{ color: 'white', margin: 0 }}>Propose Alternative</h3>
-            <button onClick={() => setSuggestionReq(null)} style={iconBtn}><X size={24} /></button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
+            <h3 style={{ color: 'white', margin: 0 }}>Propose Alternative Hall</h3>
+            <button onClick={() => setSuggestionReq(null)} style={iconBtn}><XCircle size={24} /></button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2.5rem' }}>
             <div><label style={labelStyle}>New Room</label><select value={suggestionReq.room} onChange={e => setSuggestionReq({...suggestionReq, room: e.target.value})} style={inputStyle}>{rooms.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
             <div><label style={labelStyle}>New Slot</label><select value={suggestionReq.time} onChange={e => setSuggestionReq({...suggestionReq, time: e.target.value})} style={inputStyle}>{slots.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
           </div>
           <div style={{ display: 'flex', gap: '1rem' }}>
-            <button onClick={() => { handleAction(suggestionReq.id, 'Suggest'); setSuggestionReq(null); }} style={saveBtnStyle}>Send Suggestion</button>
-            <button onClick={() => setSuggestionReq(null)} style={cancelBtnStyle}>Cancel</button>
+            <button onClick={() => { handleAction(suggestionReq.id, 'Suggest'); setSuggestionReq(null); }} style={saveBtnStyle}>Send Official Suggestion</button>
+            <button onClick={() => setSuggestionReq(null)} style={cancelBtnStyle}>Back</button>
           </div>
         </div></div>
       )}
 
       {editingReq && (
         <div style={modalOverlay}><div style={modalCard}>
-          <h3 style={{ color: 'white', marginBottom: '2rem' }}>Modify Booking Details</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
+             <h3 style={{ color: 'white', margin: 0 }}>Modify Booking Details</h3>
+             <button onClick={() => setEditingReq(null)} style={iconBtn}><XCircle size={24} /></button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2.5rem' }}>
             <div><label style={labelStyle}>Update Room</label><select value={editingReq.room} onChange={e => setEditingReq({...editingReq, room: e.target.value})} style={inputStyle}>{rooms.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
             <div><label style={labelStyle}>Update Slot</label><select value={editingReq.time} onChange={e => setEditingReq({...editingReq, time: e.target.value})} style={inputStyle}>{slots.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
           </div>
-          <button onClick={() => { setRequests(requests.map(r => r.id === editingReq.id ? editingReq : r)); setEditingReq(null); }} style={saveBtnStyle}>Update & Sync Status</button>
+          <button onClick={() => { setRequests(requests.map(r => r.id === editingReq.id ? editingReq : r)); setEditingReq(null); }} style={saveBtnStyle}>Sync & Update Record</button>
         </div></div>
       )}
     </div>
@@ -186,17 +190,19 @@ const getStatusColor = (s: string) => {
   return '#64748b';
 };
 
-const filterBar = { display: 'flex', gap: '1rem', background: '#0f172a', padding: '1rem', borderRadius: '16px', border: '1px solid #1e293b' };
-const filterGroup = { flex: 1, display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#1e293b', padding: '0.5rem 1rem', borderRadius: '10px' };
-const searchInput = { background: 'transparent', border: 'none', color: 'white', width: '100%', outline: 'none', fontSize: '0.85rem' };
-const selectStyle = { background: 'transparent', border: 'none', color: 'white', fontWeight: 'bold', fontSize: '0.85rem', outline: 'none', cursor: 'pointer', width: '100%' };
-const btnStyle = (bg: string) => ({ background: bg, border: 'none', color: 'white', padding: '8px', borderRadius: '6px', cursor: 'pointer' });
-const modalOverlay: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1200 };
-const modalCard: React.CSSProperties = { background: '#1e293b', padding: '2.5rem', borderRadius: '24px', border: '1px solid #334155', width: '95%', maxWidth: '700px' };
-const inputStyle = { width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '10px' };
+// Styles
+const filterBar = { display: 'flex', gap: '1rem', background: '#0f172a', padding: '1.25rem', borderRadius: '20px', border: '1px solid #1e293b' };
+const filterGroup = { flex: 1, display: 'flex', alignItems: 'center', gap: '0.85rem', background: '#1e293b', padding: '0.75rem 1.25rem', borderRadius: '12px', border: '1px solid #334155' };
+const searchInput = { background: 'transparent', border: 'none', color: 'white', width: '100%', outline: 'none', fontSize: '0.9rem' };
+const selectStyle = { background: 'transparent', border: 'none', color: 'white', fontWeight: 'bold', fontSize: '0.9rem', outline: 'none', cursor: 'pointer', width: '100%' };
+const actionBtn = (color: string) => ({ background: color + '15', border: `1px solid ${color}33`, color: color, padding: '8px 14px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: '0.2s' });
+const editBtn = { background: '#1e293b', border: '1px solid #334155', color: '#94a3b8', padding: '8px 14px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' };
+const modalOverlay: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.95)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1200 };
+const modalCard: React.CSSProperties = { background: '#1e293b', padding: '2.5rem', borderRadius: '32px', border: '1px solid #334155', width: '95%', maxWidth: '650px' };
+const inputStyle = { width: '100%', padding: '0.85rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '12px' };
 const labelStyle = { color: '#64748b', fontSize: '0.75rem', marginBottom: '8px', display: 'block' };
-const saveBtnStyle = { flex: 1.5, background: '#3b82f6', color: 'white', border: 'none', padding: '1rem', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' };
-const cancelBtnStyle = { flex: 1, background: '#334155', color: 'white', border: 'none', padding: '1rem', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' };
+const saveBtnStyle = { flex: 1.5, background: '#3b82f6', color: 'white', border: 'none', padding: '1rem', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer' };
+const cancelBtnStyle = { flex: 1, background: '#334155', color: 'white', border: 'none', padding: '1rem', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer' };
 const iconBtn = { background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' };
 
 export default BookingRequestsPage;
