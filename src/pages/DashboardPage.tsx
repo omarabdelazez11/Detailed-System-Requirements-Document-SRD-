@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import MultiPurposeForm from '../components/MultiPurposeForm';
 import LectureRoomForm from '../components/LectureRoomForm';
@@ -23,7 +23,22 @@ const DashboardPage: React.FC = () => {
   const [view, setView] = useState<any>(isAdmin ? 'overview' : 'my-requests');
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // SEARCH & FILTER STATE FOR STAFF
+  // CHECK FOR ACTIVATED VISIBILITY AUTHORITY
+  const [isVisibilityActivated, setIsVisibilityActivated] = useState(false);
+
+  useEffect(() => {
+    const checkActivation = () => {
+      const activatedUsers = JSON.parse(localStorage.getItem('aastmt_visibility_overrides') || '[]');
+      setIsVisibilityActivated(activatedUsers.includes(userProfile?.id));
+    };
+
+    checkActivation();
+    // Listen for storage changes in case Admin activates it in another tab
+    window.addEventListener('storage', checkActivation);
+    return () => window.removeEventListener('storage', checkActivation);
+  }, [userProfile?.id]);
+
+  // STAFF SEARCH/FILTER
   const [staffSearch, setStaffSearch] = useState('');
   const [staffFilter, setStaffFilter] = useState('All');
 
@@ -52,8 +67,6 @@ const DashboardPage: React.FC = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const handleBookingSuccess = () => setView('my-requests');
-
   return (
     <div className="dashboard-layout" style={{ display: 'flex', minHeight: '100vh', background: '#020617' }}>
       {/* Sidebar */}
@@ -80,11 +93,13 @@ const DashboardPage: React.FC = () => {
         )}
 
         <div style={sideHeader}>New Booking</div>
-        {/* REMOVE LECTURE ROOM FOR SECRETARY */}
         {!isSecretary && <SidebarButton icon={<Plus />} label="Lecture Room" active={view === 'book-lecture'} onClick={() => setView('book-lecture')} />}
         <SidebarButton icon={<Plus />} label="Multi-Purpose" active={view === 'book-multi'} onClick={() => setView('book-multi')} />
         
-        {!isAdmin && <SidebarButton icon={<Eye />} label="View Available Rooms" active={view === 'view-rooms'} onClick={() => setView('view-rooms')} />}
+        {/* ROOM VISIBILITY GATEKEEPER */}
+        {(isAdmin || isVisibilityActivated) && (
+          <SidebarButton icon={<Eye />} label="View Available Rooms" active={view === 'view-rooms'} onClick={() => setView('view-rooms')} />
+        )}
 
         <button onClick={() => logout()} style={logoutBtn}>
           <LogOut size={20} /> Logout
@@ -134,7 +149,6 @@ const DashboardPage: React.FC = () => {
                  <List size={22} color="#3b82f6" /> My Personal History
               </h2>
 
-              {/* FILTER BAR FOR STAFF */}
               <div style={staffFilterBar}>
                  <div style={staffSearchGroup}>
                     <Search size={16} color="#64748b" />
@@ -158,12 +172,11 @@ const DashboardPage: React.FC = () => {
                   </div>
                   <h3 style={{ color: 'white', margin: '0 0 0.75rem 0' }}>{req.room}</h3>
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.8rem', borderTop: '1px solid #1e293b', paddingTop: '1.25rem', marginTop: '1.25rem' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={14} /> {req.date}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Clock size={14} /> {req.time}</span>
+                    <span>{req.date}</span>
+                    <span>{req.time}</span>
                   </div>
                 </div>
               ))}
-              {filteredMyRequests.length === 0 && <div style={{ color: '#475569', gridColumn: '1 / -1', textAlign: 'center', padding: '2rem' }}>No matching requests found.</div>}
             </div>
           </div>
         )}
@@ -171,7 +184,7 @@ const DashboardPage: React.FC = () => {
         {view === 'calendar' && isAdmin && <CalendarGrid />}
         {view === 'inbox' && isAdmin && <RequestInbox />}
         {view === 'book-multi' && <MultiPurposeForm />}
-        {view === 'book-lecture' && <LectureRoomForm />}
+        {!isSecretary && view === 'book-lecture' && <LectureRoomForm />}
         {view === 'users' && isAdmin && <UserManagement />}
         {view === 'all-bookings' && isAdmin && <BookingRequestsPage />}
         {view === 'settings' && isAdmin && <SystemSettings />}
@@ -179,7 +192,7 @@ const DashboardPage: React.FC = () => {
         {view === 'fixed-schedule' && isAdmin && <FixedSchedule />}
         {view === 'authority' && isAdmin && <AuthorityManagementPage />}
         {view === 'final-approvals' && isAdmin && <ManagerApprovalPage />}
-        {view === 'view-rooms' && <ViewAvailableRoomsPage />}
+        {(isAdmin || isVisibilityActivated) && view === 'view-rooms' && <ViewAvailableRoomsPage />}
       </main>
 
       {showNotifications && <NotificationCenter onClose={() => setShowNotifications(false)} />}
@@ -200,8 +213,6 @@ const logoutBtn = { marginTop: 'auto', display: 'flex', alignItems: 'center', ga
 const notifBtn = { background: '#0f172a', border: '1px solid #1e293b', borderRadius: '14px', padding: '0.75rem', color: '#94a3b8', cursor: 'pointer' };
 const statCard = { background: '#0f172a', padding: '1.75rem', borderRadius: '24px', border: '1px solid #1e293b' };
 const statusBadge = (s: string) => ({ fontSize: '0.7rem', fontWeight: '800', padding: '5px 12px', borderRadius: '10px', background: s === 'Approved' ? '#22c55e15' : s === 'Declined' ? '#ef444415' : '#f59e0b15', color: s === 'Approved' ? '#22c55e' : s === 'Declined' ? '#ef4444' : '#f59e0b', textTransform: 'uppercase' as 'uppercase' });
-
-// STAFF FILTER STYLES
 const staffFilterBar = { display: 'flex', gap: '1rem', alignItems: 'center' };
 const staffSearchGroup = { display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#1e293b', padding: '0.6rem 1rem', borderRadius: '12px', border: '1px solid #334155' };
 const staffSearchInput = { background: 'transparent', border: 'none', color: 'white', outline: 'none', fontSize: '0.85rem', width: '200px' };
