@@ -9,11 +9,12 @@ import UserManagement from '../components/UserManagement';
 import SystemSettings from '../components/SystemSettings';
 import NotificationCenter from '../components/NotificationCenter';
 import DailyReport from '../components/DailyReport';
-import { Plus, List, LogOut, Layout, Calendar, Inbox, Settings, Users, Bell, FileText } from 'lucide-react';
+import BookingRequestsPage from './BookingRequestsPage';
+import { Plus, List, LogOut, Layout, Calendar, Inbox, Settings, Users, Bell, FileText, ClipboardList } from 'lucide-react';
 
 const DashboardPage: React.FC = () => {
   const { userProfile } = useAuth();
-  const [view, setView] = useState<'overview' | 'book-multi' | 'book-lecture' | 'calendar' | 'inbox' | 'users' | 'settings' | 'report'>('overview');
+  const [view, setView] = useState<'overview' | 'book-multi' | 'book-lecture' | 'calendar' | 'inbox' | 'users' | 'settings' | 'report' | 'all-bookings'>('overview');
   const [showNotifications, setShowNotifications] = useState(false);
 
   const mockRequests = [
@@ -38,7 +39,8 @@ const DashboardPage: React.FC = () => {
           <>
             <div style={{ padding: '1rem 1rem 0.5rem', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>Management</div>
             <SidebarButton icon={<Calendar />} label="Calendar Grid" active={view === 'calendar'} onClick={() => setView('calendar')} />
-            <SidebarButton icon={<Inbox />} label="Request Inbox" active={view === 'inbox'} onClick={() => setView('inbox')} />
+            <SidebarButton icon={<Inbox />} label="Account Inbox" active={view === 'inbox'} onClick={() => setView('inbox')} />
+            <SidebarButton icon={<ClipboardList />} label="Booking Requests" active={view === 'all-bookings'} onClick={() => setView('all-bookings')} />
             <SidebarButton icon={<Users />} label="User Management" active={view === 'users'} onClick={() => setView('users')} />
             <SidebarButton icon={<Settings />} label="System Settings" active={view === 'settings'} onClick={() => setView('settings')} />
             <SidebarButton icon={<FileText />} label="Daily Report" active={view === 'report'} onClick={() => setView('report')} />
@@ -121,6 +123,7 @@ const DashboardPage: React.FC = () => {
         {view === 'book-multi' && <MultiPurposeForm />}
         {view === 'book-lecture' && <LectureRoomForm />}
         {view === 'users' && <UserManagement />}
+        {view === 'all-bookings' && <BookingRequestsPage />}
         {view === 'settings' && <SystemSettings />}
         {view === 'report' && <DailyReport />}
       </main>
