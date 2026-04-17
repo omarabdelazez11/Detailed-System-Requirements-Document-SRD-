@@ -1,73 +1,73 @@
-# React + TypeScript + Vite
+# AASTMT Core — Room & Lecture Hall Management System
+### Developed by Team: **BEL-HOBB** 🚀
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**AASTMT Core** is a high-performance, executive-grade administrative platform designed for the Arab Academy for Science, Technology and Maritime Transport. It streamlines the complex process of room allocation, lecture scheduling, and authority delegation across campus departments.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🏗️ System Architecture
+The platform is built on a **Role-Based Governance** model, ensuring that every user from the Branch Manager to the staff members has a tailored, secure workspace.
 
-## React Compiler
+### 👥 User Roles & Privileges
+- **Branch Manager (Executive)**: Ultimate authority. Instant same-day bookings, auto-approvals, and campus-wide resource oversight.
+- **Admin**: The campus architect. Manages user registrations, evaluates booking requests, and configures the system settings.
+- **Secretary (48h Lead Time)**: Manages multi-purpose events with a focused workspace. Follows strict academic planning rules.
+- **Employee (24h Lead Time)**: Flexible lecture scheduling with a simplified, distraction-free dashboard.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## ✨ Key Features
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 🛡️ The Authority Engine (2-Rule Governance)
+A precision-engineered delegation system that allows Admins to activate specific powers for staff:
+1. **View Available Rooms**: Activates a real-time monitor for authorized users.
+2. **Manage Booking Requests**: Temporarily delegates administrative powers to substitutes.
+*Validation: Every delegation requires strict ID verification against the master registration database.*
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### 📊 Executive Dashboard
+- **Real-Time Analytics**: Weekly activity charts and resource allocation metrics.
+- **Action Hub**: Direct access to pending registrations and critical approvals.
+- **Dynamic Filtering**: Multi-dimensional search suite to find any booking by Staff Name, ID, or Room.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### ⏳ The Smart Safety Lock
+- **Secretary Rule**: 48-hour minimum lead time for all bookings.
+- **Employee Rule**: 24-hour minimum lead time for all bookings.
+- **Manager Bypass**: Executive privilege allows for instant, same-day scheduling.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+---
+
+## 🛠️ Technology Stack
+- **Frontend**: React 18 with TypeScript
+- **Styling**: Premium Custom CSS (Dark Mode Optimized)
+- **Icons**: Lucide React
+- **Authentication**: Custom Auth Engine with Persistence
+- **State Management**: React Context API & LocalStorage Sync
+
+---
+
+## 🚀 Getting Started
+
+### 1. Prerequisites
+- Node.js (v16 or higher)
+- npm or yarn
+
+### 2. Installation
+```bash
+# Clone the repository
+git clone https://github.com/omarabdelazez11/Detailed-System-Requirements-Document-SRD-.git
+
+# Install dependencies
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 3. Running Locally
+```bash
+npm run dev
 ```
+
+---
+
+## 📜 Academic Integrity
+This system is designed to maintain the highest standards of academic scheduling and resource management.
+
+**Team BEL-HOBB** — *Building with Precision, Managing with Excellence.*
