@@ -80,7 +80,7 @@ const LoginPage: React.FC = () => {
           {isLogin ? (
             <div className="input-group">
               <label>Employee ID</label>
-              <input type="text" value={formData.employeeId} onChange={(e) => setFormData({...formData, employeeId: e.target.value})} required style={inputStyle} placeholder="e.g. 1234" />
+              <input type="text" value={formData.employeeId} onChange={(e) => setFormData({...formData, employeeId: e.target.value})} required style={inputStyle} />
             </div>
           ) : (
             <>

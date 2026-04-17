@@ -21,7 +21,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const mockUser = sessionStorage.getItem('mock_user');
     if (mockUser) {
       setUser({ uid: 'mock-admin', email: 'admin@aastmt.edu' } as any);
-      setUserProfile({ name: 'Fixed Admin', role: 'BranchManager', status: 'Approved' });
+      setUserProfile({ name: 'Fixed Admin', role: 'Admin', status: 'Approved' });
       setLoading(false);
       return;
     }
