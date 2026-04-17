@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { ShieldAlert, UserCheck, Calendar, Clock, ArrowRight, Save, Trash2, Edit3, Shield, Power, UserPlus, Eye, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ShieldAlert, UserCheck, Calendar, Clock, ArrowRight, Trash2, Edit3, Power, UserPlus, Eye, AlertCircle, CheckCircle2, XCircle, Timer, Infinity as InfinityIcon } from 'lucide-react';
 
-interface Override { viewRooms: boolean; }
-interface Delegation { id: string; originalId: string; substituteId: string; start: string; end: string; status: 'Active' | 'Expired'; }
+interface Override { viewRooms: boolean; start?: string; end?: string; }
+interface Delegation { id: string; originalId: string; substituteId: string; start: string; end: string; status: 'Active' | 'Expired'; isUnlimited?: boolean; }
 interface ManagedUser { id: string; name: string; role: string; overrides: Override; }
 
 const AuthorityManagementPage: React.FC = () => {
-  // Mock DATABASE of Registered Users
-  const [registeredUsers] = useState<ManagedUser[]>([
+  const [users, setUsers] = useState<ManagedUser[]>([
     { id: 'admin_aastmt', name: 'Master Admin', role: 'Admin', overrides: { viewRooms: true } },
     { id: 'manager_branch', name: 'Branch Manager', role: 'BranchManager', overrides: { viewRooms: true } },
     { id: 'sec_office', name: 'Nour Secretary', role: 'Secretary', overrides: { viewRooms: false } },
@@ -15,21 +14,25 @@ const AuthorityManagementPage: React.FC = () => {
   ]);
 
   const [delegations, setDelegations] = useState<Delegation[]>([
-    { id: 'DEL-1', originalId: 'admin_aastmt', substituteId: 'sec_office', start: '2026-04-20', end: '2026-04-25', status: 'Active' }
+    { id: 'DEL-1', originalId: 'admin_aastmt', substituteId: 'sec_office', start: '2026-04-20', end: '2026-04-25', status: 'Active', isUnlimited: false }
   ]);
 
   const [isDelegating, setIsDelegating] = useState(false);
-  const [delForm, setDelForm] = useState({ primary: '', sub: '', start: '', end: '' });
+  const [isSettingTime, setIsSettingTime] = useState<string | null>(null); // User ID for Rule 1 Time
+  const [delForm, setDelForm] = useState({ primary: '', sub: '', start: '', end: '', isUnlimited: false });
   const [error, setError] = useState('');
+
+  const toggleVisibility = (id: string) => {
+    setUsers(users.map(u => u.id === id ? { ...u, overrides: { ...u.overrides, viewRooms: !u.overrides.viewRooms } } : u));
+  };
 
   const handleConfirmDelegation = () => {
     setError('');
-    // CHECK IF USERS EXIST IN REGISTERED DATABASE
-    const primaryExists = registeredUsers.find(u => u.id === delForm.primary);
-    const subExists = registeredUsers.find(u => u.id === delForm.sub);
+    const primaryExists = users.find(u => u.id === delForm.primary);
+    const subExists = users.find(u => u.id === delForm.sub);
 
     if (!primaryExists || !subExists) {
-      setError(`Verification Failed: ${!primaryExists ? 'Primary ID' : 'Substitute ID'} is not registered in the system.`);
+      setError(`Verification Failed: ${!primaryExists ? 'Primary ID' : 'Substitute ID'} is not registered.`);
       return;
     }
 
@@ -38,13 +41,14 @@ const AuthorityManagementPage: React.FC = () => {
       originalId: delForm.primary,
       substituteId: delForm.sub,
       start: delForm.start,
-      end: delForm.end,
-      status: 'Active'
+      end: delForm.isUnlimited ? '∞' : delForm.end,
+      status: 'Active',
+      isUnlimited: delForm.isUnlimited
     };
 
     setDelegations([newDel, ...delegations]);
     setIsDelegating(false);
-    setDelForm({ primary: '', sub: '', start: '', end: '' });
+    setDelForm({ primary: '', sub: '', start: '', end: '', isUnlimited: false });
   };
 
   return (
@@ -62,25 +66,32 @@ const AuthorityManagementPage: React.FC = () => {
         {/* RULE 1: VIEW OVERRIDES */}
         <div style={sectionBox}>
           <h3 style={sectionTitle}><Eye size={18} color="#22c55e" /> Rule 1: View Available Rooms</h3>
-          <p style={ruleHint}>Granting this override allows a user to see the full campus room grid without booking rights.</p>
+          <p style={ruleHint}>Enable visibility with optional time-locked access for specific users.</p>
           <table style={tableStyle}>
             <thead>
               <tr style={thRow}>
                 <th>Registered User</th>
-                <th>Role</th>
+                <th style={{ textAlign: 'center' }}>Time Window</th>
                 <th style={{ textAlign: 'right' }}>Visibility Override</th>
               </tr>
             </thead>
             <tbody>
-              {registeredUsers.map(u => (
+              {users.map(u => (
                 <tr key={u.id} style={tdRow}>
                   <td style={{ padding: '1rem 0' }}>
                     <div style={{ color: 'white', fontWeight: 'bold' }}>{u.name}</div>
                     <div style={{ color: '#64748b', fontSize: '0.7rem' }}>{u.id}</div>
                   </td>
-                  <td><span style={roleBadge}>{u.role}</span></td>
+                  <td style={{ textAlign: 'center' }}>
+                    <button onClick={() => setIsSettingTime(u.id)} style={timeSetBtn}>
+                       <Timer size={14} /> {u.overrides.start ? 'Scheduled' : 'Set Period'}
+                    </button>
+                  </td>
                   <td style={{ textAlign: 'right' }}>
-                    <button style={u.overrides.viewRooms ? toggleBtnOn : toggleBtnOff}>
+                    <button 
+                      onClick={() => toggleVisibility(u.id)} 
+                      style={u.overrides.viewRooms ? toggleBtnOn : toggleBtnOff}
+                    >
                        {u.overrides.viewRooms ? 'Enabled' : 'Disabled'}
                     </button>
                   </td>
@@ -94,9 +105,9 @@ const AuthorityManagementPage: React.FC = () => {
         <div style={sectionBox}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
              <h3 style={sectionTitle}><UserCheck size={18} color="#f59e0b" /> Rule 2: Temporary Access</h3>
-             <button onClick={() => setIsDelegating(true)} style={smallAddBtn}><UserPlus size={14} /> Add Delegation</button>
+             <button onClick={() => { setIsDelegating(true); setError(''); }} style={smallAddBtn}><UserPlus size={14} /> Add Delegation</button>
           </div>
-          <p style={ruleHint}>Substitutes inherit the right to process booking requests during the defined dates.</p>
+          <p style={ruleHint}>Assign substitutes to inherit task processing rights for specific periods.</p>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }}>
             {delegations.map(del => (
@@ -110,13 +121,29 @@ const AuthorityManagementPage: React.FC = () => {
                    <ArrowRight size={16} color="#334155" />
                    <div style={delUnit}><span style={roleLabel}>Substitute</span><div style={{ color: '#f59e0b' }}>{del.substituteId}</div></div>
                 </div>
-                <div style={delTime}><Calendar size={12} /> {del.start} — {del.end}</div>
-                <button onClick={() => setDelegations(delegations.filter(d => d.id !== del.id))} style={delActionBtn}><Trash2 size={14} /> Revoke Early</button>
+                <div style={delTime}>
+                   <Calendar size={12} /> {del.start} — {del.isUnlimited ? <InfinityIcon size={14} color="#22c55e" /> : del.end}
+                </div>
+                <button onClick={() => setDelegations(delegations.filter(d => d.id !== del.id))} style={delActionBtn}><Trash2 size={14} /> Revoke Access</button>
               </div>
             ))}
           </div>
         </div>
       </div>
+
+      {/* RULE 1 TIME MODAL */}
+      {isSettingTime && (
+        <div style={modalOverlay}>
+          <div style={modalCard}>
+             <h3 style={{ color: 'white', marginBottom: '1.5rem' }}>Set Visibility Period</h3>
+             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
+                <div><label style={labelStyle}>Access Start</label><input type="date" style={inputStyle} /></div>
+                <div><label style={labelStyle}>Access End</label><input type="date" style={inputStyle} /></div>
+             </div>
+             <button onClick={() => setIsSettingTime(null)} style={saveBtn}>Confirm Visibility Window</button>
+          </div>
+        </div>
+      )}
 
       {/* DELEGATION MODAL */}
       {isDelegating && (
@@ -126,19 +153,22 @@ const AuthorityManagementPage: React.FC = () => {
                <h3 style={{ color: 'white', margin: 0 }}>Setup Temporary Delegation</h3>
                <button onClick={() => setIsDelegating(false)} style={{ background: 'transparent', border: 'none', color: '#64748b' }}><XCircle size={24} /></button>
             </div>
-
             {error && <div style={errorBox}><AlertCircle size={16} /> {error}</div>}
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                  <div><label style={labelStyle}>Primary Employee ID</label><input value={delForm.primary} onChange={e => setDelForm({...delForm, primary: e.target.value})} placeholder="e.g. admin_aastmt" style={inputStyle} /></div>
                  <div><label style={labelStyle}>Designated Substitute ID</label><input value={delForm.sub} onChange={e => setDelForm({...delForm, sub: e.target.value})} placeholder="e.g. sec_office" style={inputStyle} /></div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                 <div><label style={labelStyle}>Start Date</label><input type="date" value={delForm.start} onChange={e => setDelForm({...delForm, start: e.target.value})} style={inputStyle} /></div>
-                 <div><label style={labelStyle}>End Date (Auto-Revoke)</label><input type="date" value={delForm.end} onChange={e => setDelForm({...delForm, end: e.target.value})} style={inputStyle} /></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#0f172a', padding: '1rem', borderRadius: '12px' }}>
+                 <input type="checkbox" checked={delForm.isUnlimited} onChange={e => setDelForm({...delForm, isUnlimited: e.target.checked})} style={{ width: '18px', height: '18px' }} />
+                 <span style={{ color: 'white', fontSize: '0.85rem' }}>Grant Unlimited Duration (No Expiry)</span>
               </div>
-              <p style={{ fontSize: '0.7rem', color: '#64748b', fontStyle: 'italic' }}>* System will verify IDs against the master registration database before confirming.</p>
+              {!delForm.isUnlimited && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                   <div><label style={labelStyle}>Start Date</label><input type="date" value={delForm.start} onChange={e => setDelForm({...delForm, start: e.target.value})} style={inputStyle} /></div>
+                   <div><label style={labelStyle}>End Date (Auto-Revoke)</label><input type="date" value={delForm.end} onChange={e => setDelForm({...delForm, end: e.target.value})} style={inputStyle} /></div>
+                </div>
+              )}
             </div>
             <button onClick={handleConfirmDelegation} style={saveBtn}>Confirm Delegation Period</button>
           </div>
@@ -156,9 +186,9 @@ const ruleHint = { fontSize: '0.75rem', color: '#64748b', marginBottom: '1.5rem'
 const tableStyle = { width: '100%', borderCollapse: 'collapse' as 'collapse', textAlign: 'left' as 'left' };
 const thRow = { borderBottom: '1px solid #1e293b', color: '#64748b', fontSize: '0.7rem' };
 const tdRow = { borderBottom: '1px solid #1e293b55' };
-const roleBadge = { color: '#94a3b8', fontSize: '0.7rem', fontWeight: 'bold' };
 const toggleBtnOn = { background: '#22c55e11', color: '#22c55e', border: '1px solid #22c55e33', padding: '4px 12px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' };
 const toggleBtnOff = { background: '#33415533', color: '#64748b', border: 'none', padding: '4px 12px', borderRadius: '8px', fontSize: '0.7rem', cursor: 'pointer' };
+const timeSetBtn = { background: '#1e293b', color: '#94a3b8', border: '1px solid #334155', padding: '4px 10px', borderRadius: '8px', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', margin: '0 auto' };
 const smallAddBtn = { background: '#3b82f6', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' };
 const delCard = { background: '#1e293b', padding: '1.5rem', borderRadius: '20px', border: '1px solid #334155' };
 const delFlow = { display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'space-between', marginBottom: '1rem' };
@@ -167,7 +197,7 @@ const roleLabel = { fontSize: '0.6rem', color: '#64748b', textTransform: 'upperc
 const delTime = { fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '1rem' };
 const delActionBtn = { background: 'transparent', border: 'none', color: '#ef4444', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '4px' };
 const activeBadge = { color: '#22c55e', fontSize: '0.65rem', fontWeight: 'bold' };
-const modalOverlay: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.95)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1200 };
+const modalOverlay: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.95)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 };
 const modalCard: React.CSSProperties = { background: '#1e293b', padding: '2.5rem', borderRadius: '32px', border: '1px solid #334155', width: '95%', maxWidth: '550px' };
 const inputStyle = { width: '100%', padding: '0.85rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '12px', outline: 'none' };
 const labelStyle = { color: '#64748b', fontSize: '0.75rem', marginBottom: '8px', display: 'block' };
