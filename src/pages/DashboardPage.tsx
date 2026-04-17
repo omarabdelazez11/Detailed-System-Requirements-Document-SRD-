@@ -13,15 +13,19 @@ import BookingRequestsPage from '../pages/BookingRequestsPage';
 import AuthorityManagementPage from './AuthorityManagementPage';
 import ManagerApprovalPage from './ManagerApprovalPage';
 import ViewAvailableRoomsPage from './ViewAvailableRoomsPage';
-import { Plus, List, LogOut, Layout, Calendar, Inbox, Settings, Users, Bell, FileText, ClipboardList, ShieldCheck, Clock, MapPin, CheckCircle, AlertCircle, BarChart3, PieChart, TrendingUp, UserCheck, ShieldAlert, Gavel, Eye, Activity, ArrowUpRight, History } from 'lucide-react';
+import { Plus, List, LogOut, Layout, Calendar, Inbox, Settings, Users, Bell, FileText, ClipboardList, ShieldCheck, Clock, MapPin, CheckCircle, AlertCircle, BarChart3, PieChart, TrendingUp, UserCheck, ShieldAlert, Gavel, Eye, Activity, ArrowUpRight, History, Search, Filter } from 'lucide-react';
 
 const DashboardPage: React.FC = () => {
   const { userProfile, logout } = useAuth();
   const isAdmin = userProfile?.role === 'Admin' || userProfile?.role === 'BranchManager';
+  const isSecretary = userProfile?.role === 'Secretary';
   
-  // Default view: Admins see Overview, Staff see My Requests
   const [view, setView] = useState<any>(isAdmin ? 'overview' : 'my-requests');
   const [showNotifications, setShowNotifications] = useState(false);
+
+  // SEARCH & FILTER STATE FOR STAFF
+  const [staffSearch, setStaffSearch] = useState('');
+  const [staffFilter, setStaffFilter] = useState('All');
 
   const adminStats = [
     { label: 'Total Bookings', value: '1,284', icon: <TrendingUp />, color: '#3b82f6' },
@@ -35,6 +39,18 @@ const DashboardPage: React.FC = () => {
     { label: 'Awaiting Approval', value: '3', icon: <Clock />, color: '#f59e0b' },
     { label: 'Approved Requests', value: '11', icon: <CheckCircle />, color: '#22c55e' },
   ];
+
+  const myRequests = [
+    { id: 'BK-902', room: 'Hall A1', date: '2026-04-20', time: '10:20 AM', status: 'Approved' },
+    { id: 'BK-501', room: 'Lab 101', date: '2026-04-22', time: '08:30 AM', status: 'Pending' },
+    { id: 'BK-442', room: 'Board Room', date: '2026-04-25', time: '12:00 PM', status: 'Declined' }
+  ];
+
+  const filteredMyRequests = myRequests.filter(r => {
+    const matchesSearch = r.room.toLowerCase().includes(staffSearch.toLowerCase()) || r.id.toLowerCase().includes(staffSearch.toLowerCase());
+    const matchesFilter = staffFilter === 'All' || r.status === staffFilter;
+    return matchesSearch && matchesFilter;
+  });
 
   const handleBookingSuccess = () => setView('my-requests');
 
@@ -64,10 +80,10 @@ const DashboardPage: React.FC = () => {
         )}
 
         <div style={sideHeader}>New Booking</div>
-        <SidebarButton icon={<Plus />} label="Lecture Room" active={view === 'book-lecture'} onClick={() => setView('book-lecture')} />
+        {/* REMOVE LECTURE ROOM FOR SECRETARY */}
+        {!isSecretary && <SidebarButton icon={<Plus />} label="Lecture Room" active={view === 'book-lecture'} onClick={() => setView('book-lecture')} />}
         <SidebarButton icon={<Plus />} label="Multi-Purpose" active={view === 'book-multi'} onClick={() => setView('book-multi')} />
         
-        {/* View Available Rooms: Conditionally shown for staff if they have override (mocked here as false for standard) */}
         {!isAdmin && <SidebarButton icon={<Eye />} label="View Available Rooms" active={view === 'view-rooms'} onClick={() => setView('view-rooms')} />}
 
         <button onClick={() => logout()} style={logoutBtn}>
@@ -96,7 +112,6 @@ const DashboardPage: React.FC = () => {
                 </div>
               ))}
             </div>
-            {/* Charts omitted for brevity but they are in the logic */}
           </div>
         )}
 
@@ -114,15 +129,28 @@ const DashboardPage: React.FC = () => {
               </div>
             )}
             
-            <h2 style={{ color: 'white', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-               <List size={22} color="#3b82f6" /> My Personal History
-            </h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <h2 style={{ color: 'white', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                 <List size={22} color="#3b82f6" /> My Personal History
+              </h2>
+
+              {/* FILTER BAR FOR STAFF */}
+              <div style={staffFilterBar}>
+                 <div style={staffSearchGroup}>
+                    <Search size={16} color="#64748b" />
+                    <input placeholder="Search rooms..." value={staffSearch} onChange={e => setStaffSearch(e.target.value)} style={staffSearchInput} />
+                 </div>
+                 <select value={staffFilter} onChange={e => setStaffFilter(e.target.value)} style={staffSelect}>
+                    <option value="All">All Statuses</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Declined">Declined</option>
+                 </select>
+              </div>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-              {[
-                { id: 'BK-902', room: 'Hall A1', date: '2026-04-20', time: '10:20 AM', status: 'Approved' },
-                { id: 'BK-501', room: 'Lab 101', date: '2026-04-22', time: '08:30 AM', status: 'Pending' },
-                { id: 'BK-442', room: 'Board Room', date: '2026-04-25', time: '12:00 PM', status: 'Declined' }
-              ].map(req => (
+              {filteredMyRequests.map(req => (
                 <div key={req.id} style={statCard}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
                     <MapPin size={22} color="#3b82f6" />
@@ -135,6 +163,7 @@ const DashboardPage: React.FC = () => {
                   </div>
                 </div>
               ))}
+              {filteredMyRequests.length === 0 && <div style={{ color: '#475569', gridColumn: '1 / -1', textAlign: 'center', padding: '2rem' }}>No matching requests found.</div>}
             </div>
           </div>
         )}
@@ -171,5 +200,11 @@ const logoutBtn = { marginTop: 'auto', display: 'flex', alignItems: 'center', ga
 const notifBtn = { background: '#0f172a', border: '1px solid #1e293b', borderRadius: '14px', padding: '0.75rem', color: '#94a3b8', cursor: 'pointer' };
 const statCard = { background: '#0f172a', padding: '1.75rem', borderRadius: '24px', border: '1px solid #1e293b' };
 const statusBadge = (s: string) => ({ fontSize: '0.7rem', fontWeight: '800', padding: '5px 12px', borderRadius: '10px', background: s === 'Approved' ? '#22c55e15' : s === 'Declined' ? '#ef444415' : '#f59e0b15', color: s === 'Approved' ? '#22c55e' : s === 'Declined' ? '#ef4444' : '#f59e0b', textTransform: 'uppercase' as 'uppercase' });
+
+// STAFF FILTER STYLES
+const staffFilterBar = { display: 'flex', gap: '1rem', alignItems: 'center' };
+const staffSearchGroup = { display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#1e293b', padding: '0.6rem 1rem', borderRadius: '12px', border: '1px solid #334155' };
+const staffSearchInput = { background: 'transparent', border: 'none', color: 'white', outline: 'none', fontSize: '0.85rem', width: '200px' };
+const staffSelect = { background: '#1e293b', border: '1px solid #334155', color: 'white', padding: '0.6rem 1rem', borderRadius: '12px', outline: 'none', fontSize: '0.85rem', cursor: 'pointer' };
 
 export default DashboardPage;
