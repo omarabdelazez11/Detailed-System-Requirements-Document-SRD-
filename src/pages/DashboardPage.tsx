@@ -7,11 +7,14 @@ import CalendarGrid from '../components/CalendarGrid';
 import RequestInbox from '../components/RequestInbox';
 import UserManagement from '../components/UserManagement';
 import SystemSettings from '../components/SystemSettings';
-import { Plus, List, LogOut, Layout, Calendar, Inbox, Settings, Users } from 'lucide-react';
+import NotificationCenter from '../components/NotificationCenter';
+import DailyReport from '../components/DailyReport';
+import { Plus, List, LogOut, Layout, Calendar, Inbox, Settings, Users, Bell, FileText } from 'lucide-react';
 
 const DashboardPage: React.FC = () => {
   const { userProfile } = useAuth();
-  const [view, setView] = useState<'overview' | 'book-multi' | 'book-lecture' | 'calendar' | 'inbox' | 'users' | 'settings'>('overview');
+  const [view, setView] = useState<'overview' | 'book-multi' | 'book-lecture' | 'calendar' | 'inbox' | 'users' | 'settings' | 'report'>('overview');
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const mockRequests = [
     { id: '1', room: 'Hall A', date: '2026-04-20', status: 'Approved', type: 'Multi-Purpose' },
@@ -38,6 +41,7 @@ const DashboardPage: React.FC = () => {
             <SidebarButton icon={<Inbox />} label="Request Inbox" active={view === 'inbox'} onClick={() => setView('inbox')} />
             <SidebarButton icon={<Users />} label="User Management" active={view === 'users'} onClick={() => setView('users')} />
             <SidebarButton icon={<Settings />} label="System Settings" active={view === 'settings'} onClick={() => setView('settings')} />
+            <SidebarButton icon={<FileText />} label="Daily Report" active={view === 'report'} onClick={() => setView('report')} />
           </>
         )}
 
@@ -56,12 +60,28 @@ const DashboardPage: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
+      <main style={{ flex: 1, padding: '2rem', overflowY: 'auto', position: 'relative' }}>
         <header style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <p style={{ color: '#94a3b8' }}>Welcome back,</p>
             <h1 style={{ color: 'white' }}>{userProfile?.name || 'User'}</h1>
             <span style={{ fontSize: '0.75rem', background: '#3b82f6', padding: '2px 8px', borderRadius: '12px' }}>{userProfile?.role || 'Guest'}</span>
+          </div>
+          
+          <div style={{ position: 'relative' }}>
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)}
+              style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '0.75rem', color: 'white', cursor: 'pointer', position: 'relative' }}
+            >
+              <Bell size={20} />
+              <span style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#ef4444', color: 'white', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', display: 'flex', alignItems: 'center', justify-content: 'center' }}>2</span>
+            </button>
+            
+            {showNotifications && (
+              <div style={{ position: 'absolute', top: '50px', right: '0', zIndex: 100 }}>
+                <NotificationCenter />
+              </div>
+            )}
           </div>
         </header>
 
@@ -99,6 +119,7 @@ const DashboardPage: React.FC = () => {
         {view === 'book-lecture' && <LectureRoomForm />}
         {view === 'users' && <UserManagement />}
         {view === 'settings' && <SystemSettings />}
+        {view === 'report' && <DailyReport />}
       </main>
     </div>
   );
