@@ -5,6 +5,8 @@ import MultiPurposeForm from '../components/MultiPurposeForm';
 import LectureRoomForm from '../components/LectureRoomForm';
 import CalendarGrid from '../components/CalendarGrid';
 import RequestInbox from '../components/RequestInbox';
+import UserManagement from '../components/UserManagement';
+import SystemSettings from '../components/SystemSettings';
 import { Plus, List, LogOut, Layout, Calendar, Inbox, Settings, Users } from 'lucide-react';
 
 const DashboardPage: React.FC = () => {
@@ -95,13 +97,8 @@ const DashboardPage: React.FC = () => {
         {view === 'inbox' && <RequestInbox />}
         {view === 'book-multi' && <MultiPurposeForm />}
         {view === 'book-lecture' && <LectureRoomForm />}
-        
-        {(view === 'users' || view === 'settings') && (
-          <div className="card" style={{ padding: '2rem', textAlign: 'center' }}>
-            <h2>{view === 'users' ? 'User Management' : 'System Settings'}</h2>
-            <p style={{ color: '#94a3b8', marginTop: '1rem' }}>Coming soon in Phase 4...</p>
-          </div>
-        )}
+        {view === 'users' && <UserManagement />}
+        {view === 'settings' && <SystemSettings />}
       </main>
     </div>
   );
