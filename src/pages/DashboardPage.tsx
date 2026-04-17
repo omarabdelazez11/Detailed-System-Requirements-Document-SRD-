@@ -3,55 +3,50 @@ import { useAuth } from '../context/AuthContext';
 import { auth } from '../services/firebase';
 import MultiPurposeForm from '../components/MultiPurposeForm';
 import LectureRoomForm from '../components/LectureRoomForm';
-import { Plus, List, LogOut, Layout } from 'lucide-react';
+import CalendarGrid from '../components/CalendarGrid';
+import RequestInbox from '../components/RequestInbox';
+import { Plus, List, LogOut, Layout, Calendar, Inbox, Settings, Users } from 'lucide-react';
 
 const DashboardPage: React.FC = () => {
   const { userProfile } = useAuth();
-  const [view, setView] = useState<'overview' | 'book-multi' | 'book-lecture'>('overview');
+  const [view, setView] = useState<'overview' | 'book-multi' | 'book-lecture' | 'calendar' | 'inbox' | 'users' | 'settings'>('overview');
 
   const mockRequests = [
     { id: '1', room: 'Hall A', date: '2026-04-20', status: 'Approved', type: 'Multi-Purpose' },
     { id: '2', room: 'Room 101', date: '2026-04-22', status: 'Pending', type: 'Lecture' },
   ];
 
-  const canBookLecture = userProfile?.role === 'Admin' || userProfile?.role === 'BranchManager' || userProfile?.role === 'Employee';
-  const canBookMulti = true; // Everyone can book multi-purpose
+  const isAdmin = userProfile?.role === 'Admin' || userProfile?.role === 'BranchManager';
+  const canBookLecture = isAdmin || userProfile?.role === 'Employee';
 
   return (
     <div className="dashboard-layout" style={{ display: 'flex', minHeight: '100vh', background: '#0f172a' }}>
       {/* Sidebar */}
-      <aside style={{ width: '260px', borderRight: '1px solid #334155', padding: '2rem 1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <h2 style={{ color: '#3b82f6', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Layout size={24} /> AASTMT
+      <aside style={{ width: '280px', borderRight: '1px solid #334155', padding: '2rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <h2 style={{ color: '#3b82f6', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0 1rem' }}>
+          <Layout size={24} /> AASTMT Booking
         </h2>
         
-        <button 
-          onClick={() => setView('overview')}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: '8px', border: 'none', background: view === 'overview' ? '#1e293b' : 'transparent', color: 'white', cursor: 'pointer', textAlign: 'left' }}
-        >
-          <List size={20} /> My Requests
-        </button>
-
-        {canBookLecture && (
-          <button 
-            onClick={() => setView('book-lecture')}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: '8px', border: 'none', background: view === 'book-lecture' ? '#1e293b' : 'transparent', color: 'white', cursor: 'pointer', textAlign: 'left' }}
-          >
-            <Plus size={20} /> Book Lecture Room
-          </button>
+        <SidebarButton icon={<List />} label="My Requests" active={view === 'overview'} onClick={() => setView('overview')} />
+        
+        {isAdmin && (
+          <>
+            <div style={{ padding: '1rem 1rem 0.5rem', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>Management</div>
+            <SidebarButton icon={<Calendar />} label="Calendar Grid" active={view === 'calendar'} onClick={() => setView('calendar')} />
+            <SidebarButton icon={<Inbox />} label="Request Inbox" active={view === 'inbox'} onClick={() => setView('inbox')} />
+            <SidebarButton icon={<Users />} label="User Management" active={view === 'users'} onClick={() => setView('users')} />
+            <SidebarButton icon={<Settings />} label="System Settings" active={view === 'settings'} onClick={() => setView('settings')} />
+          </>
         )}
 
-        <button 
-          onClick={() => setView('book-multi')}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: '8px', border: 'none', background: view === 'book-multi' ? '#1e293b' : 'transparent', color: 'white', cursor: 'pointer', textAlign: 'left' }}
-        >
-          <Plus size={20} /> Book Multi-Purpose
-        </button>
+        <div style={{ padding: '1rem 1rem 0.5rem', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>Booking</div>
+        {canBookLecture && <SidebarButton icon={<Plus />} label="Book Lecture Room" active={view === 'book-lecture'} onClick={() => setView('book-lecture')} />}
+        <SidebarButton icon={<Plus />} label="Book Multi-Purpose" active={view === 'book-multi'} onClick={() => setView('book-multi')} />
 
         <div style={{ marginTop: 'auto' }}>
           <button 
             onClick={() => auth.signOut()}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: '8px', border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', width: '100%', textAlign: 'left' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: '8px', border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', width: '100%', textAlign: 'left' }}
           >
             <LogOut size={20} /> Logout
           </button>
@@ -60,10 +55,12 @@ const DashboardPage: React.FC = () => {
 
       {/* Main Content */}
       <main style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-        <header style={{ marginBottom: '2rem' }}>
-          <p style={{ color: '#94a3b8' }}>Welcome back,</p>
-          <h1 style={{ color: 'white' }}>{userProfile?.name || 'User'}</h1>
-          <span style={{ fontSize: '0.75rem', background: '#3b82f6', padding: '2px 8px', borderRadius: '12px' }}>{userProfile?.role || 'Guest'}</span>
+        <header style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <p style={{ color: '#94a3b8' }}>Welcome back,</p>
+            <h1 style={{ color: 'white' }}>{userProfile?.name || 'User'}</h1>
+            <span style={{ fontSize: '0.75rem', background: '#3b82f6', padding: '2px 8px', borderRadius: '12px' }}>{userProfile?.role || 'Guest'}</span>
+          </div>
         </header>
 
         {view === 'overview' && (
@@ -94,11 +91,50 @@ const DashboardPage: React.FC = () => {
           </div>
         )}
 
+        {view === 'calendar' && <CalendarGrid />}
+        {view === 'inbox' && <RequestInbox />}
         {view === 'book-multi' && <MultiPurposeForm />}
         {view === 'book-lecture' && <LectureRoomForm />}
+        
+        {(view === 'users' || view === 'settings') && (
+          <div className="card" style={{ padding: '2rem', textAlign: 'center' }}>
+            <h2>{view === 'users' ? 'User Management' : 'System Settings'}</h2>
+            <p style={{ color: '#94a3b8', marginTop: '1rem' }}>Coming soon in Phase 4...</p>
+          </div>
+        )}
       </main>
     </div>
   );
 };
+
+interface SidebarButtonProps {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}
+
+const SidebarButton: React.FC<SidebarButtonProps> = ({ icon, label, active, onClick }) => (
+  <button 
+    onClick={onClick}
+    style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: '0.75rem', 
+      padding: '0.75rem 1rem', 
+      borderRadius: '8px', 
+      border: 'none', 
+      background: active ? '#1e293b' : 'transparent', 
+      color: active ? '#3b82f6' : 'white', 
+      cursor: 'pointer', 
+      textAlign: 'left',
+      width: '100%',
+      transition: 'all 0.2s ease'
+    }}
+  >
+    {React.cloneElement(icon as React.ReactElement, { size: 20 })}
+    {label}
+  </button>
+);
 
 export default DashboardPage;
