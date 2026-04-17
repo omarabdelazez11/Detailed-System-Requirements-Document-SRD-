@@ -74,7 +74,7 @@ const DashboardPage: React.FC = () => {
               style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '0.75rem', color: 'white', cursor: 'pointer', position: 'relative' }}
             >
               <Bell size={20} />
-              <span style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#ef4444', color: 'white', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', display: 'flex', alignItems: 'center', justify-content: 'center' }}>2</span>
+              <span style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#ef4444', color: 'white', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>2</span>
             </button>
             
             {showNotifications && (
