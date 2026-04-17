@@ -89,7 +89,7 @@ const MultiPurposeForm: React.FC = () => {
       </div>
 
       <h3 style={{ margin: '1.5rem 0 1rem', fontSize: '1.1rem', color: '#3b82f6' }}>Event Manager Details</h3>
-      <div style={{ display: 'grid', gridTemplate-columns: '1fr 1fr', gap: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
         <div className="input-group">
           <label><User size={16} style={{ marginRight: '4px' }} /> Name</label>
           <input type="text" value={formData.managerName} onChange={(e) => setFormData({...formData, managerName: e.target.value})} required style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '6px' }} />
