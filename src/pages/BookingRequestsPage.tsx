@@ -1,16 +1,17 @@
-import React, { useState } from 'react';
-import { Search, Check, X, Clock, Edit3, Lightbulb, MapPin, Filter, Calendar, Save, AlertTriangle, User, Hash, ArrowUpRight } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Check, X, Clock, Edit3, Lightbulb, MapPin, Filter, Calendar, Save, AlertTriangle, User, Hash, ArrowUpRight, XCircle } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 
 interface BookingRequest {
   id: string;
+  requesterId: string;
   requesterName: string;
-  requesterRole: 'Employee' | 'Secretary' | 'Admin';
+  requesterRole: string;
   room: string;
   date: string;
   time: string;
-  type: 'Lecture' | 'Multi-Purpose';
+  type: string;
   status: 'Pending' | 'Awaiting Manager' | 'Approved' | 'Declined' | 'Suggestion Sent';
 }
 
@@ -22,14 +23,20 @@ const BookingRequestsPage: React.FC = () => {
   const [roomFilter, setRoomFilter] = useState('All Rooms');
   const [searchQuery, setSearchQuery] = useState('');
   
-  const [requests, setRequests] = useState<BookingRequest[]>([
-    { id: 'BK-101', requesterName: 'Dr. Ahmed', requesterRole: 'Employee', room: 'Hall A1', date: '2026-04-20', time: '08:30 AM - 10:00 AM', type: 'Lecture', status: 'Approved' },
-    { id: 'BK-202', requesterName: 'Sarah Admin', requesterRole: 'Admin', room: 'Hall A1', date: '2026-04-20', time: '08:30 AM - 10:00 AM', type: 'Multi-Purpose', status: 'Pending' },
-    { id: 'BK-505', requesterName: 'Hana Staff', requesterRole: 'Secretary', room: 'Event Hall', date: '2026-04-22', time: '10:20 AM - 11:50 AM', type: 'Multi-Purpose', status: 'Pending' },
-  ]);
-
+  const [requests, setRequests] = useState<BookingRequest[]>([]);
   const [editingReq, setEditingReq] = useState<BookingRequest | null>(null);
   const [suggestionReq, setSuggestionReq] = useState<BookingRequest | null>(null);
+
+  // LOAD DYNAMIC DATA
+  useEffect(() => {
+    const loadData = () => {
+      const saved = JSON.parse(localStorage.getItem('aastmt_all_bookings') || '[]');
+      setRequests(saved);
+    };
+    loadData();
+    window.addEventListener('storage', loadData);
+    return () => window.removeEventListener('storage', loadData);
+  }, []);
 
   const isAdmin = userProfile?.role === 'Admin';
   const isManager = userProfile?.role === 'BranchManager';
@@ -39,22 +46,24 @@ const BookingRequestsPage: React.FC = () => {
   };
 
   const handleAction = (id: string, action: 'Approve' | 'Decline' | 'Suggest') => {
-    setRequests(requests.map(r => {
+    const updated = requests.map(r => {
       if (r.id !== id) return r;
       if (action === 'Approve') {
-        // Admin approval for Multi-Purpose goes to Manager, but Manager approval is FINAL
-        if (isAdmin && r.type === 'Multi-Purpose' && r.requesterRole !== 'Admin' && !isManager) return { ...r, status: 'Awaiting Manager' };
+        if (isAdmin && r.type === 'Multi-Purpose' && !isManager) return { ...r, status: 'Awaiting Manager' };
         return { ...r, status: 'Approved' };
       }
       if (action === 'Suggest') return { ...r, status: 'Suggestion Sent' };
       return { ...r, status: 'Declined' };
-    }));
+    });
+
+    setRequests(updated as any);
+    localStorage.setItem('aastmt_all_bookings', JSON.stringify(updated));
   };
 
   const filteredRequests = requests.filter(r => {
     const matchesStatus = statusFilter === 'All' || r.status === statusFilter;
     const matchesRoom = roomFilter === 'All Rooms' || r.room === roomFilter;
-    const matchesSearch = r.requesterName.toLowerCase().includes(searchQuery.toLowerCase()) || r.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = r.requesterName?.toLowerCase().includes(searchQuery.toLowerCase()) || r.id.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesRoom && matchesSearch;
   });
 
@@ -62,14 +71,11 @@ const BookingRequestsPage: React.FC = () => {
     <div className="card" style={{ padding: '2.5rem' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '3rem' }}>
         <h2 style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: 0, color: 'white' }}>
-          <Clock size={28} color="#3b82f6" /> Booking Control Center
+          <Clock size={28} color="#3b82f6" /> Live Booking Control Center
         </h2>
 
         <div style={filterBar}>
-          <div style={filterGroup}>
-             <Search size={18} color="#64748b" />
-             <input placeholder="Search Staff or ID..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={searchInput} />
-          </div>
+          <div style={filterGroup}><Search size={18} color="#64748b" /><input placeholder="Search Staff or ID..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={searchInput} /></div>
           <div style={filterGroup}>
             <MapPin size={18} color="#3b82f6" />
             <select value={roomFilter} onChange={e => setRoomFilter(e.target.value)} style={selectStyle}>
@@ -82,7 +88,6 @@ const BookingRequestsPage: React.FC = () => {
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={selectStyle}>
               <option value="All">All Statuses</option>
               <option value="Pending">Pending</option>
-              <option value="Awaiting Manager">Manager Pending</option>
               <option value="Approved">Approved</option>
               <option value="Declined">Declined</option>
             </select>
@@ -93,89 +98,63 @@ const BookingRequestsPage: React.FC = () => {
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid #334155', color: '#64748b', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              <th style={{ padding: '1.25rem' }}>Requester Information</th>
+            <tr style={{ borderBottom: '1px solid #334155', color: '#64748b', fontSize: '0.75rem', textTransform: 'uppercase' }}>
+              <th style={{ padding: '1.25rem' }}>Staff Information</th>
               <th style={{ padding: '1.25rem' }}>Location & Timing</th>
               <th style={{ padding: '1.25rem' }}>Current Status</th>
-              <th style={{ padding: '1.25rem', textAlign: 'right' }}>Management Actions</th>
+              <th style={{ padding: '1.25rem', textAlign: 'right' }}>Management</th>
             </tr>
           </thead>
           <tbody>
             {filteredRequests.map(req => {
               const hasConflict = checkConflict(req) && (req.status === 'Pending' || req.status === 'Awaiting Manager');
-              const showDirectActions = (req.status === 'Pending' || req.status === 'Awaiting Manager');
+              const canAct = req.status === 'Pending' || req.status === 'Awaiting Manager';
               
               return (
-                <tr key={req.id} style={{ borderBottom: '1px solid #1e293b', transition: '0.2s', background: hasConflict ? '#ef444405' : 'transparent' }}>
+                <tr key={req.id} style={{ borderBottom: '1px solid #1e293b', background: hasConflict ? '#ef444405' : 'transparent' }}>
                   <td style={{ padding: '1.5rem 1.25rem' }}>
-                    <div style={{ fontWeight: 'bold', color: 'white', fontSize: '1rem' }}>{req.requesterName}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>{req.requesterRole} • ID: {req.id}</div>
+                    <div style={{ fontWeight: 'bold', color: 'white' }}>{req.requesterName}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{req.type} • {req.id}</div>
                   </td>
                   <td style={{ padding: '1.5rem 1.25rem' }}>
                     <div style={{ fontSize: '0.95rem', color: hasConflict ? '#ef4444' : 'white', fontWeight: '600' }}>{req.room}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>{req.date} • {req.time}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{req.date} • {req.time}</div>
                   </td>
                   <td style={{ padding: '1.5rem 1.25rem' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <span style={{ 
-                        width: 'fit-content', padding: '5px 12px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: '800', 
-                        background: getStatusColor(req.status) + '15', color: getStatusColor(req.status), textTransform: 'uppercase'
-                      }}>
-                        {req.status}
-                      </span>
-                      {hasConflict && <span style={{ color: '#ef4444', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold' }}><AlertTriangle size={14} /> Schedule Conflict</span>}
-                    </div>
+                    <span style={{ padding: '5px 12px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: '800', background: getStatusColor(req.status) + '15', color: getStatusColor(req.status), textTransform: 'uppercase' }}>{req.status}</span>
                   </td>
                   <td style={{ padding: '1.5rem 1.25rem', textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                      {showDirectActions && (
+                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                      {canAct && (
                         <>
                           {!hasConflict && <button onClick={() => handleAction(req.id, 'Approve')} style={actionBtn('#22c55e')}><Check size={16} /> Approve</button>}
                           <button onClick={() => setSuggestionReq(req)} style={actionBtn('#3b82f6')}><Lightbulb size={16} /> Suggest</button>
                           <button onClick={() => handleAction(req.id, 'Decline')} style={actionBtn('#ef4444')}><X size={16} /> Decline</button>
                         </>
                       )}
-                      {!showDirectActions && (
-                        <button onClick={() => setEditingReq(req)} style={editBtn}><Edit3 size={16} /> Modify Details</button>
-                      )}
+                      {!canAct && <button onClick={() => setEditingReq(req)} style={editBtn}><Edit3 size={16} /> Modify</button>}
                     </div>
                   </td>
                 </tr>
               );
             })}
+            {filteredRequests.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', padding: '4rem', color: '#475569' }}>No incoming requests found.</td></tr>}
           </tbody>
         </table>
       </div>
 
-      {/* MODALS (Suggest & Edit) */}
+      {/* Suggestion Modal */}
       {suggestionReq && (
         <div style={modalOverlay}><div style={modalCard}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
-            <h3 style={{ color: 'white', margin: 0 }}>Propose Alternative Hall</h3>
+            <h3 style={{ color: 'white', margin: 0 }}>Propose Alternative</h3>
             <button onClick={() => setSuggestionReq(null)} style={iconBtn}><XCircle size={24} /></button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2.5rem' }}>
-            <div><label style={labelStyle}>New Room</label><select value={suggestionReq.room} onChange={e => setSuggestionReq({...suggestionReq, room: e.target.value})} style={inputStyle}>{rooms.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
-            <div><label style={labelStyle}>New Slot</label><select value={suggestionReq.time} onChange={e => setSuggestionReq({...suggestionReq, time: e.target.value})} style={inputStyle}>{slots.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+            <div><label style={labelStyle}>Room</label><select value={suggestionReq.room} onChange={e => setSuggestionReq({...suggestionReq, room: e.target.value})} style={inputStyle}>{rooms.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
+            <div><label style={labelStyle}>Slot</label><select value={suggestionReq.time} onChange={e => setSuggestionReq({...suggestionReq, time: e.target.value})} style={inputStyle}>{slots.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
           </div>
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            <button onClick={() => { handleAction(suggestionReq.id, 'Suggest'); setSuggestionReq(null); }} style={saveBtnStyle}>Send Official Suggestion</button>
-            <button onClick={() => setSuggestionReq(null)} style={cancelBtnStyle}>Back</button>
-          </div>
-        </div></div>
-      )}
-
-      {editingReq && (
-        <div style={modalOverlay}><div style={modalCard}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
-             <h3 style={{ color: 'white', margin: 0 }}>Modify Booking Details</h3>
-             <button onClick={() => setEditingReq(null)} style={iconBtn}><XCircle size={24} /></button>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2.5rem' }}>
-            <div><label style={labelStyle}>Update Room</label><select value={editingReq.room} onChange={e => setEditingReq({...editingReq, room: e.target.value})} style={inputStyle}>{rooms.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
-            <div><label style={labelStyle}>Update Slot</label><select value={editingReq.time} onChange={e => setEditingReq({...editingReq, time: e.target.value})} style={inputStyle}>{slots.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
-          </div>
-          <button onClick={() => { setRequests(requests.map(r => r.id === editingReq.id ? editingReq : r)); setEditingReq(null); }} style={saveBtnStyle}>Sync & Update Record</button>
+          <button onClick={() => { handleAction(suggestionReq.id, 'Suggest'); setSuggestionReq(null); }} style={saveBtnStyle}>Send Official Suggestion</button>
         </div></div>
       )}
     </div>
@@ -190,19 +169,17 @@ const getStatusColor = (s: string) => {
   return '#64748b';
 };
 
-// Styles
 const filterBar = { display: 'flex', gap: '1rem', background: '#0f172a', padding: '1.25rem', borderRadius: '20px', border: '1px solid #1e293b' };
 const filterGroup = { flex: 1, display: 'flex', alignItems: 'center', gap: '0.85rem', background: '#1e293b', padding: '0.75rem 1.25rem', borderRadius: '12px', border: '1px solid #334155' };
 const searchInput = { background: 'transparent', border: 'none', color: 'white', width: '100%', outline: 'none', fontSize: '0.9rem' };
 const selectStyle = { background: 'transparent', border: 'none', color: 'white', fontWeight: 'bold', fontSize: '0.9rem', outline: 'none', cursor: 'pointer', width: '100%' };
-const actionBtn = (color: string) => ({ background: color + '15', border: `1px solid ${color}33`, color: color, padding: '8px 14px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: '0.2s' });
+const actionBtn = (color: string) => ({ background: color + '15', border: `1px solid ${color}33`, color: color, padding: '8px 14px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' });
 const editBtn = { background: '#1e293b', border: '1px solid #334155', color: '#94a3b8', padding: '8px 14px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' };
 const modalOverlay: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.95)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1200 };
 const modalCard: React.CSSProperties = { background: '#1e293b', padding: '2.5rem', borderRadius: '32px', border: '1px solid #334155', width: '95%', maxWidth: '650px' };
 const inputStyle = { width: '100%', padding: '0.85rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '12px' };
 const labelStyle = { color: '#64748b', fontSize: '0.75rem', marginBottom: '8px', display: 'block' };
-const saveBtnStyle = { flex: 1.5, background: '#3b82f6', color: 'white', border: 'none', padding: '1rem', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer' };
-const cancelBtnStyle = { flex: 1, background: '#334155', color: 'white', border: 'none', padding: '1rem', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer' };
+const saveBtnStyle = { width: '100%', background: '#3b82f6', color: 'white', border: 'none', padding: '1rem', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer' };
 const iconBtn = { background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' };
 
 export default BookingRequestsPage;
