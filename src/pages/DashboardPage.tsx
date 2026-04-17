@@ -13,11 +13,12 @@ import FixedSchedule from '../components/FixedSchedule';
 import BookingRequestsPage from '../pages/BookingRequestsPage';
 import AuthorityManagementPage from './AuthorityManagementPage';
 import ManagerApprovalPage from './ManagerApprovalPage';
-import { Plus, List, LogOut, Layout, Calendar, Inbox, Settings, Users, Bell, FileText, ClipboardList, ShieldCheck, Clock, MapPin, CheckCircle, AlertCircle, BarChart3, PieChart, TrendingUp, UserCheck, ShieldAlert, Gavel } from 'lucide-react';
+import ViewAvailableRoomsPage from './ViewAvailableRoomsPage';
+import { Plus, List, LogOut, Layout, Calendar, Inbox, Settings, Users, Bell, FileText, ClipboardList, ShieldCheck, Clock, MapPin, CheckCircle, AlertCircle, BarChart3, PieChart, TrendingUp, UserCheck, ShieldAlert, Gavel, Eye } from 'lucide-react';
 
 const DashboardPage: React.FC = () => {
   const { userProfile } = useAuth();
-  const [view, setView] = useState<'overview' | 'my-requests' | 'book-multi' | 'book-lecture' | 'calendar' | 'inbox' | 'users' | 'settings' | 'report' | 'all-bookings' | 'fixed-schedule' | 'authority' | 'final-approvals'>('overview');
+  const [view, setView] = useState<'overview' | 'my-requests' | 'book-multi' | 'book-lecture' | 'calendar' | 'inbox' | 'users' | 'settings' | 'report' | 'all-bookings' | 'fixed-schedule' | 'authority' | 'final-approvals' | 'view-rooms'>('overview');
   const [showNotifications, setShowNotifications] = useState(false);
 
   // Mock Data
@@ -62,6 +63,7 @@ const DashboardPage: React.FC = () => {
         )}
 
         <div style={{ padding: '1rem 1rem 0.5rem', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>Booking</div>
+        <SidebarButton icon={<Eye />} label="View Available Rooms" active={view === 'view-rooms'} onClick={() => setView('view-rooms')} />
         <SidebarButton icon={<Plus />} label="Lecture Room" active={view === 'book-lecture'} onClick={() => setView('book-lecture')} />
         <SidebarButton icon={<Plus />} label="Multi-Purpose" active={view === 'book-multi'} onClick={() => setView('book-multi')} />
 
@@ -126,6 +128,7 @@ const DashboardPage: React.FC = () => {
         {view === 'fixed-schedule' && <FixedSchedule />}
         {view === 'authority' && <AuthorityManagementPage />}
         {view === 'final-approvals' && <ManagerApprovalPage />}
+        {view === 'view-rooms' && <ViewAvailableRoomsPage />}
       </main>
 
       {showNotifications && <NotificationCenter onClose={() => setShowNotifications(false)} />}
