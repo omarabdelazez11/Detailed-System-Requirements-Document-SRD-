@@ -111,17 +111,22 @@ const BookingRequestsPage: React.FC = () => {
                 <td style={{ padding: '1rem', textAlign: 'right' }}>
                   {req.status === 'Pending' ? (
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                      <button title="Approve" style={{ background: '#22c55e', border: 'none', color: 'white', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}>
+                      <button onClick={() => alert('Approving...')} title="Approve" style={{ background: '#22c55e', border: 'none', color: 'white', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}>
                         <Check size={16} />
                       </button>
-                      <button title="Reject" style={{ background: '#ef4444', border: 'none', color: 'white', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}>
+                      <button onClick={() => alert('Rejecting...')} title="Reject" style={{ background: '#ef4444', border: 'none', color: 'white', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}>
                         <X size={16} />
                       </button>
                     </div>
                   ) : (
-                    <button style={{ background: 'transparent', border: '1px solid #334155', color: '#94a3b8', padding: '6px 12px', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>
-                      View Details
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                      <button onClick={() => alert('Edit mode opened for: ' + req.room)} style={{ background: 'transparent', border: '1px solid #3b82f6', color: '#3b82f6', padding: '6px 12px', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>
+                        Edit
+                      </button>
+                      <button onClick={() => { if(confirm('Are you sure you want to cancel this booking?')) setRequests(requests.filter(r => r.id !== req.id)) }} style={{ background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', padding: '6px 12px', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>
+                        Delete
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>
