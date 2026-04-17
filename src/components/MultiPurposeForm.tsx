@@ -7,6 +7,9 @@ interface FormProps { onSuccess?: () => void; }
 
 const MultiPurposeForm: React.FC<FormProps> = ({ onSuccess }) => {
   const { userProfile } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
   const [formData, setFormData] = useState({
     room: '',
     date: '',
@@ -24,23 +27,33 @@ const MultiPurposeForm: React.FC<FormProps> = ({ onSuccess }) => {
   const timeSlots = [...AASTMT_SLOTS, ...AASTMT_DOUBLE_SLOTS];
   const rooms = ROOM_DATABASE;
   const isManager = userProfile?.role === 'BranchManager';
+  const isEmployee = userProfile?.role === 'Employee';
 
+  // THE STRICT 24h / 48h LOGIC
   const isDateValid = useMemo(() => {
     if (!formData.date) return false;
     if (isManager) return true;
+
     const selectedDate = new Date(formData.date);
     const now = new Date();
-    const fortyEightHoursLater = new Date(now.getTime() + (48 * 60 * 60 * 1000));
-    return selectedDate >= fortyEightHoursLater;
-  }, [formData.date, isManager]);
+    // Rule: Employee gets 24h, everyone else (Secretaries/Admins) gets 48h
+    const leadTimeHours = isEmployee ? 24 : 48;
+    const threshold = new Date(now.getTime() + (leadTimeHours * 60 * 60 * 1000));
+    
+    return selectedDate >= threshold;
+  }, [formData.date, isManager, isEmployee]);
 
   const canSubmit = formData.room && formData.date && formData.timeSlot && formData.purpose && (isManager || isDateValid);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || isSubmitting) return;
 
-    // SAVE TO SYSTEM DATABASE (LOCALSTORAGE MOCK)
+    setIsSubmitting(true);
+    
+    // Database Writing Simulation
+    await new Promise(r => setTimeout(r, 600));
+
     const newBooking = {
       id: `BK-${Math.floor(Math.random() * 900 + 100)}`,
       requesterId: userProfile?.id,
@@ -56,11 +69,27 @@ const MultiPurposeForm: React.FC<FormProps> = ({ onSuccess }) => {
     const existing = JSON.parse(localStorage.getItem('aastmt_all_bookings') || '[]');
     localStorage.setItem('aastmt_all_bookings', JSON.stringify([newBooking, ...existing]));
 
-    alert(isManager ? 'Instant Booking Confirmed!' : 'Request submitted for academic approval!');
-    if (onSuccess) onSuccess();
+    setIsSuccess(true);
+    
+    // Redirect after confirmation
+    setTimeout(() => {
+      if (onSuccess) onSuccess();
+    }, 1000);
   };
 
   const inputStyle = { width: '100%', padding: '0.85rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '12px', outline: 'none' };
+
+  if (isSuccess) {
+    return (
+      <div className="card" style={{ padding: '5rem', textAlign: 'center', background: '#0f172a', borderRadius: '32px', border: '1px solid #22c55e33' }}>
+         <div style={{ background: '#22c55e15', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem' }}>
+            <CheckCircle size={48} color="#22c55e" />
+         </div>
+         <h2 style={{ color: 'white', marginBottom: '1rem' }}>Booking Confirmed!</h2>
+         <p style={{ color: '#64748b' }}>Moving you to your personal dashboard...</p>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="card" style={{ padding: '2.5rem', maxWidth: '850px', margin: '0 auto', background: '#0f172a', border: '1px solid #1e293b', borderRadius: '32px' }}>
@@ -82,7 +111,11 @@ const MultiPurposeForm: React.FC<FormProps> = ({ onSuccess }) => {
         <div className="input-group">
           <label style={labelStyle}>Target Date</label>
           <input type="date" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} required style={{ ...inputStyle, borderColor: (formData.date && !isDateValid && !isManager) ? '#ef4444' : '#334155' }} />
-          {formData.date && !isDateValid && !isManager && <span style={errorTxt}><AlertTriangle size={12} /> Minimum 48h lead time required</span>}
+          {formData.date && !isDateValid && !isManager && (
+            <span style={errorTxt}>
+              <AlertTriangle size={12} /> Minimum {isEmployee ? '24h' : '48h'} lead time required
+            </span>
+          )}
         </div>
       </div>
 
@@ -99,19 +132,8 @@ const MultiPurposeForm: React.FC<FormProps> = ({ onSuccess }) => {
         <textarea value={formData.purpose} onChange={(e) => setFormData({...formData, purpose: e.target.value})} required style={{ ...inputStyle, minHeight: '100px', resize: 'none' }} placeholder="Provide a brief summary of the event activities..." />
       </div>
 
-      <h3 style={subHeader}>Technical Support & Equipment</h3>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', background: '#1e293b55', padding: '1.5rem', borderRadius: '16px' }}>
-        <label style={checkLabel}>
-          <input type="checkbox" checked={formData.mics} onChange={(e) => setFormData({...formData, mics: e.target.checked})} style={checkboxStyle} />
-          <Mic size={18} /> Microphones
-          {formData.mics && <input type="number" value={formData.micQty} onChange={(e) => setFormData({...formData, micQty: parseInt(e.target.value)})} min="1" style={smallInput} />}
-        </label>
-        <label style={checkLabel}><input type="checkbox" checked={formData.laptop} onChange={(e) => setFormData({...formData, laptop: e.target.checked})} style={checkboxStyle} /> <Laptop size={18} /> Laptop</label>
-        <label style={checkLabel}><input type="checkbox" checked={formData.videoConf} onChange={(e) => setFormData({...formData, videoConf: e.target.checked})} style={checkboxStyle} /> <Video size={18} /> Video Conference</label>
-      </div>
-
-      <button type="submit" disabled={!canSubmit} style={!canSubmit ? disabledSubmit : (isManager ? managerSubmit : standardSubmit)}>
-        {isManager ? 'Confirm Instant Executive Booking' : (!isDateValid && formData.date ? 'Select a Date > 48h' : 'Submit for Academic Approval')}
+      <button type="submit" disabled={!canSubmit || isSubmitting} style={!canSubmit ? disabledSubmit : (isManager ? managerSubmit : standardSubmit)}>
+        {isSubmitting ? 'Processing Request...' : (isManager ? 'Confirm Instant Executive Booking' : (!isDateValid && formData.date ? `Select a Date > ${isEmployee ? '24h' : '48h'}` : 'Submit for Academic Approval'))}
       </button>
     </form>
   );
@@ -119,10 +141,6 @@ const MultiPurposeForm: React.FC<FormProps> = ({ onSuccess }) => {
 
 // Styles
 const labelStyle = { color: '#64748b', fontSize: '0.8rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' };
-const subHeader = { margin: '2rem 0 1rem', fontSize: '1rem', color: '#3b82f6', fontWeight: 'bold', textTransform: 'uppercase' as 'uppercase', letterSpacing: '1px' };
-const checkLabel = { display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#94a3b8', cursor: 'pointer', fontSize: '0.9rem' };
-const checkboxStyle = { width: '18px', height: '18px', accentColor: '#3b82f6' };
-const smallInput = { width: '50px', marginLeft: '8px', padding: '4px', background: '#0f172a', color: 'white', border: '1px solid #334155', borderRadius: '4px' };
 const standardSubmit = { width: '100%', marginTop: '2.5rem', background: '#3b82f6', color: 'white', border: 'none', padding: '1.1rem', borderRadius: '16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem' };
 const managerSubmit = { width: '100%', marginTop: '2.5rem', background: '#22c55e', color: 'white', border: 'none', padding: '1.1rem', borderRadius: '16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 0 20px #22c55e33' };
 const disabledSubmit = { width: '100%', marginTop: '2.5rem', background: '#1e293b', color: '#475569', border: 'none', padding: '1.1rem', borderRadius: '16px', fontWeight: 'bold', cursor: 'not-allowed', fontSize: '1rem' };
