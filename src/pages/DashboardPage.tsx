@@ -17,7 +17,7 @@ import ViewAvailableRoomsPage from './ViewAvailableRoomsPage';
 import { Plus, List, LogOut, Layout, Calendar, Inbox, Settings, Users, Bell, FileText, ClipboardList, ShieldCheck, Clock, MapPin, CheckCircle, AlertCircle, BarChart3, PieChart, TrendingUp, UserCheck, ShieldAlert, Gavel, Eye, Activity, ArrowUpRight } from 'lucide-react';
 
 const DashboardPage: React.FC = () => {
-  const { userProfile } = useAuth();
+  const { userProfile, logout } = useAuth(); // FIXED LOGOUT IMPORT
   const [view, setView] = useState<'overview' | 'my-requests' | 'book-multi' | 'book-lecture' | 'calendar' | 'inbox' | 'users' | 'settings' | 'report' | 'all-bookings' | 'fixed-schedule' | 'authority' | 'final-approvals' | 'view-rooms'>('overview');
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -61,7 +61,7 @@ const DashboardPage: React.FC = () => {
         <SidebarButton icon={<Plus />} label="Lecture Room" active={view === 'book-lecture'} onClick={() => setView('book-lecture')} />
         <SidebarButton icon={<Plus />} label="Multi-Purpose" active={view === 'book-multi'} onClick={() => setView('book-multi')} />
 
-        <button onClick={() => auth.signOut()} style={logoutBtn}>
+        <button onClick={() => logout()} style={logoutBtn}> {/* FIXED LOGOUT CALL */}
           <LogOut size={20} /> Logout
         </button>
       </aside>
@@ -87,7 +87,6 @@ const DashboardPage: React.FC = () => {
                 </div>
               ))}
             </div>
-            {/* Charts would go here */}
           </div>
         )}
 
@@ -117,8 +116,8 @@ const DashboardPage: React.FC = () => {
 
         {view === 'calendar' && <CalendarGrid />}
         {view === 'inbox' && <RequestInbox />}
-        {view === 'book-multi' && <MultiPurposeForm onSuccess={handleBookingSuccess} />}
-        {view === 'book-lecture' && <LectureRoomForm onSuccess={handleBookingSuccess} />}
+        {view === 'book-multi' && <MultiPurposeForm />}
+        {view === 'book-lecture' && <LectureRoomForm />}
         {view === 'users' && <UserManagement />}
         {view === 'all-bookings' && <BookingRequestsPage />}
         {view === 'settings' && <SystemSettings />}
