@@ -3,7 +3,9 @@ import { Calendar, Clock, User, Phone, Briefcase, Mic, Laptop, Video, MapPin, Ch
 import { AASTMT_SLOTS, AASTMT_DOUBLE_SLOTS, ROOM_DATABASE } from '../utils/timeUtils';
 import { useAuth } from '../context/AuthContext';
 
-const MultiPurposeForm: React.FC = () => {
+interface FormProps { onSuccess?: () => void; }
+
+const MultiPurposeForm: React.FC<FormProps> = ({ onSuccess }) => {
   const { userProfile } = useAuth();
   const [formData, setFormData] = useState({
     room: '',
@@ -23,16 +25,12 @@ const MultiPurposeForm: React.FC = () => {
   const rooms = ROOM_DATABASE;
   const isManager = userProfile?.role === 'BranchManager';
 
-  // 48-HOUR VALIDATION LOGIC
   const isDateValid = useMemo(() => {
     if (!formData.date) return false;
-    if (isManager) return true; // Manager bypasses 48h rule
-
+    if (isManager) return true;
     const selectedDate = new Date(formData.date);
     const now = new Date();
     const fortyEightHoursLater = new Date(now.getTime() + (48 * 60 * 60 * 1000));
-    
-    // Reset hours for a clean date comparison if needed, or keep precise
     return selectedDate >= fortyEightHoursLater;
   }, [formData.date, isManager]);
 
@@ -40,11 +38,26 @@ const MultiPurposeForm: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isManager) {
-      alert('Branch Manager Privilege: Instant Booking Confirmed!');
-    } else {
-      alert('Multi-Purpose Request submitted for academic approval!');
-    }
+    if (!canSubmit) return;
+
+    // SAVE TO SYSTEM DATABASE (LOCALSTORAGE MOCK)
+    const newBooking = {
+      id: `BK-${Math.floor(Math.random() * 900 + 100)}`,
+      requesterId: userProfile?.id,
+      requesterName: userProfile?.name,
+      room: formData.room,
+      date: formData.date,
+      time: formData.timeSlot,
+      status: isManager ? 'Approved' : 'Pending',
+      type: 'Multi-Purpose',
+      createdAt: new Date().toISOString()
+    };
+
+    const existing = JSON.parse(localStorage.getItem('aastmt_all_bookings') || '[]');
+    localStorage.setItem('aastmt_all_bookings', JSON.stringify([newBooking, ...existing]));
+
+    alert(isManager ? 'Instant Booking Confirmed!' : 'Request submitted for academic approval!');
+    if (onSuccess) onSuccess();
   };
 
   const inputStyle = { width: '100%', padding: '0.85rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '12px', outline: 'none' };
@@ -68,18 +81,8 @@ const MultiPurposeForm: React.FC = () => {
         </div>
         <div className="input-group">
           <label style={labelStyle}>Target Date</label>
-          <input 
-            type="date" 
-            value={formData.date} 
-            onChange={(e) => setFormData({...formData, date: e.target.value})} 
-            required 
-            style={{ ...inputStyle, borderColor: (formData.date && !isDateValid && !isManager) ? '#ef4444' : '#334155' }} 
-          />
-          {formData.date && !isDateValid && !isManager && (
-            <span style={{ color: '#ef4444', fontSize: '0.7rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 'bold' }}>
-              <AlertTriangle size={12} /> Bookings must be made 48h in advance
-            </span>
-          )}
+          <input type="date" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} required style={{ ...inputStyle, borderColor: (formData.date && !isDateValid && !isManager) ? '#ef4444' : '#334155' }} />
+          {formData.date && !isDateValid && !isManager && <span style={errorTxt}><AlertTriangle size={12} /> Minimum 48h lead time required</span>}
         </div>
       </div>
 
@@ -103,21 +106,11 @@ const MultiPurposeForm: React.FC = () => {
           <Mic size={18} /> Microphones
           {formData.mics && <input type="number" value={formData.micQty} onChange={(e) => setFormData({...formData, micQty: parseInt(e.target.value)})} min="1" style={smallInput} />}
         </label>
-        <label style={checkLabel}>
-          <input type="checkbox" checked={formData.laptop} onChange={(e) => setFormData({...formData, laptop: e.target.checked})} style={checkboxStyle} />
-          <Laptop size={18} /> Laptop Station
-        </label>
-        <label style={checkLabel}>
-          <input type="checkbox" checked={formData.videoConf} onChange={(e) => setFormData({...formData, videoConf: e.target.checked})} style={checkboxStyle} />
-          <Video size={18} /> Video Conferencing
-        </label>
+        <label style={checkLabel}><input type="checkbox" checked={formData.laptop} onChange={(e) => setFormData({...formData, laptop: e.target.checked})} style={checkboxStyle} /> <Laptop size={18} /> Laptop</label>
+        <label style={checkLabel}><input type="checkbox" checked={formData.videoConf} onChange={(e) => setFormData({...formData, videoConf: e.target.checked})} style={checkboxStyle} /> <Video size={18} /> Video Conference</label>
       </div>
 
-      <button 
-        type="submit" 
-        disabled={!canSubmit} 
-        style={!canSubmit ? disabledSubmit : (isManager ? managerSubmit : standardSubmit)}
-      >
+      <button type="submit" disabled={!canSubmit} style={!canSubmit ? disabledSubmit : (isManager ? managerSubmit : standardSubmit)}>
         {isManager ? 'Confirm Instant Executive Booking' : (!isDateValid && formData.date ? 'Select a Date > 48h' : 'Submit for Academic Approval')}
       </button>
     </form>
@@ -134,5 +127,6 @@ const standardSubmit = { width: '100%', marginTop: '2.5rem', background: '#3b82f
 const managerSubmit = { width: '100%', marginTop: '2.5rem', background: '#22c55e', color: 'white', border: 'none', padding: '1.1rem', borderRadius: '16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', boxShadow: '0 0 20px #22c55e33' };
 const disabledSubmit = { width: '100%', marginTop: '2.5rem', background: '#1e293b', color: '#475569', border: 'none', padding: '1.1rem', borderRadius: '16px', fontWeight: 'bold', cursor: 'not-allowed', fontSize: '1rem' };
 const managerBadge = { background: '#22c55e15', color: '#22c55e', padding: '6px 14px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' };
+const errorTxt = { color: '#ef4444', fontSize: '0.7rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 'bold' };
 
 export default MultiPurposeForm;

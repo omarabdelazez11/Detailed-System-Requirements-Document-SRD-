@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import MultiPurposeForm from '../components/MultiPurposeForm';
 import LectureRoomForm from '../components/LectureRoomForm';
@@ -22,44 +22,34 @@ const DashboardPage: React.FC = () => {
   
   const [view, setView] = useState<any>(isAdmin ? 'overview' : 'my-requests');
   const [showNotifications, setShowNotifications] = useState(false);
-
-  // CHECK FOR ACTIVATED VISIBILITY AUTHORITY
   const [isVisibilityActivated, setIsVisibilityActivated] = useState(false);
 
+  // DYNAMIC BOOKINGS LOADING
+  const [allBookings, setAllBookings] = useState<any[]>([]);
+
   useEffect(() => {
-    const checkActivation = () => {
+    const loadData = () => {
+      // Load Visibility Overrides
       const activatedUsers = JSON.parse(localStorage.getItem('aastmt_visibility_overrides') || '[]');
       setIsVisibilityActivated(activatedUsers.includes(userProfile?.id));
+
+      // Load All Bookings
+      const saved = JSON.parse(localStorage.getItem('aastmt_all_bookings') || '[]');
+      setAllBookings(saved);
     };
 
-    checkActivation();
-    // Listen for storage changes in case Admin activates it in another tab
-    window.addEventListener('storage', checkActivation);
-    return () => window.removeEventListener('storage', checkActivation);
+    loadData();
+    window.addEventListener('storage', loadData);
+    return () => window.removeEventListener('storage', loadData);
   }, [userProfile?.id]);
 
   // STAFF SEARCH/FILTER
   const [staffSearch, setStaffSearch] = useState('');
   const [staffFilter, setStaffFilter] = useState('All');
 
-  const adminStats = [
-    { label: 'Total Bookings', value: '1,284', icon: <TrendingUp />, color: '#3b82f6' },
-    { label: 'Pending Apps', value: '12', icon: <Clock />, color: '#f59e0b' },
-    { label: 'Room Utilization', value: '78%', icon: <Layout />, color: '#22c55e' },
-    { label: 'Active Users', value: '450', icon: <UserCheck />, color: '#a855f7' },
-  ];
-
-  const staffStats = [
-    { label: 'My Total Bookings', value: '14', icon: <List />, color: '#3b82f6' },
-    { label: 'Awaiting Approval', value: '3', icon: <Clock />, color: '#f59e0b' },
-    { label: 'Approved Requests', value: '11', icon: <CheckCircle />, color: '#22c55e' },
-  ];
-
-  const myRequests = [
-    { id: 'BK-902', room: 'Hall A1', date: '2026-04-20', time: '10:20 AM', status: 'Approved' },
-    { id: 'BK-501', room: 'Lab 101', date: '2026-04-22', time: '08:30 AM', status: 'Pending' },
-    { id: 'BK-442', room: 'Board Room', date: '2026-04-25', time: '12:00 PM', status: 'Declined' }
-  ];
+  const myRequests = useMemo(() => {
+    return allBookings.filter(b => b.requesterId === userProfile?.id);
+  }, [allBookings, userProfile?.id]);
 
   const filteredMyRequests = myRequests.filter(r => {
     const matchesSearch = r.room.toLowerCase().includes(staffSearch.toLowerCase()) || r.id.toLowerCase().includes(staffSearch.toLowerCase());
@@ -67,9 +57,16 @@ const DashboardPage: React.FC = () => {
     return matchesSearch && matchesFilter;
   });
 
+  const staffStats = useMemo(() => [
+    { label: 'My Total Bookings', value: myRequests.length.toString(), icon: <List />, color: '#3b82f6' },
+    { label: 'Awaiting Approval', value: myRequests.filter(r => r.status === 'Pending').length.toString(), icon: <Clock />, color: '#f59e0b' },
+    { label: 'Approved Requests', value: myRequests.filter(r => r.status === 'Approved').length.toString(), icon: <CheckCircle />, color: '#22c55e' },
+  ], [myRequests]);
+
+  const handleBookingSuccess = () => setView('my-requests');
+
   return (
     <div className="dashboard-layout" style={{ display: 'flex', minHeight: '100vh', background: '#020617' }}>
-      {/* Sidebar */}
       <aside style={sidebarStyle}>
         <h2 style={{ color: '#3b82f6', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0 1rem', fontSize: '1.25rem' }}>
           <ShieldCheck size={28} /> AASTMT Core
@@ -96,17 +93,13 @@ const DashboardPage: React.FC = () => {
         {!isSecretary && <SidebarButton icon={<Plus />} label="Lecture Room" active={view === 'book-lecture'} onClick={() => setView('book-lecture')} />}
         <SidebarButton icon={<Plus />} label="Multi-Purpose" active={view === 'book-multi'} onClick={() => setView('book-multi')} />
         
-        {/* ROOM VISIBILITY GATEKEEPER */}
         {(isAdmin || isVisibilityActivated) && (
           <SidebarButton icon={<Eye />} label="View Available Rooms" active={view === 'view-rooms'} onClick={() => setView('view-rooms')} />
         )}
 
-        <button onClick={() => logout()} style={logoutBtn}>
-          <LogOut size={20} /> Logout
-        </button>
+        <button onClick={() => logout()} style={logoutBtn}><LogOut size={20} /> Logout</button>
       </aside>
 
-      {/* Main Content */}
       <main style={{ flex: 1, padding: '2.5rem', overflowY: 'auto' }}>
         <header style={{ marginBottom: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -118,15 +111,12 @@ const DashboardPage: React.FC = () => {
 
         {view === 'overview' && isAdmin && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
-              {adminStats.map(s => (
-                <div key={s.label} style={statCard}>
-                  <div style={{ background: `${s.color}15`, color: s.color, width: '42px', height: '42px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>{s.icon}</div>
-                  <div style={{ fontSize: '1.85rem', fontWeight: 'bold', color: 'white' }}>{s.value}</div>
-                  <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '6px' }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
+             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
+                <StatCard label="Total Bookings" value={allBookings.length.toString()} icon={<TrendingUp />} color="#3b82f6" />
+                <StatCard label="Pending Apps" value={allBookings.filter(b => b.status === 'Pending').length.toString()} icon={<Clock />} color="#f59e0b" />
+                <StatCard label="Room Utilization" value="78%" icon={<Layout />} color="#22c55e" />
+                <StatCard label="Active Users" value="450" icon={<UserCheck />} color="#a855f7" />
+             </div>
           </div>
         )}
 
@@ -135,7 +125,7 @@ const DashboardPage: React.FC = () => {
             {!isAdmin && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '3rem' }}>
                 {staffStats.map(s => (
-                  <div key={s.label} style={{ ...statCard, background: '#1e293b55' }}>
+                  <div key={s.label} style={{ ...statCardStyle, background: '#1e293b55' }}>
                     <div style={{ background: `${s.color}15`, color: s.color, width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>{s.icon}</div>
                     <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white' }}>{s.value}</div>
                     <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{s.label}</div>
@@ -145,54 +135,41 @@ const DashboardPage: React.FC = () => {
             )}
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-              <h2 style={{ color: 'white', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                 <List size={22} color="#3b82f6" /> My Personal History
-              </h2>
-
+              <h2 style={{ color: 'white', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}><List size={22} color="#3b82f6" /> My Personal History</h2>
               <div style={staffFilterBar}>
-                 <div style={staffSearchGroup}>
-                    <Search size={16} color="#64748b" />
-                    <input placeholder="Search rooms..." value={staffSearch} onChange={e => setStaffSearch(e.target.value)} style={staffSearchInput} />
-                 </div>
+                 <div style={staffSearchGroup}><Search size={16} color="#64748b" /><input placeholder="Search..." value={staffSearch} onChange={e => setStaffSearch(e.target.value)} style={staffSearchInput} /></div>
                  <select value={staffFilter} onChange={e => setStaffFilter(e.target.value)} style={staffSelect}>
-                    <option value="All">All Statuses</option>
-                    <option value="Approved">Approved</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Declined">Declined</option>
+                    <option value="All">All Statuses</option><option value="Approved">Approved</option><option value="Pending">Pending</option><option value="Declined">Declined</option>
                  </select>
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
               {filteredMyRequests.map(req => (
-                <div key={req.id} style={statCard}>
+                <div key={req.id} style={statCardStyle}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                    <MapPin size={22} color="#3b82f6" />
-                    <span style={statusBadge(req.status)}>{req.status}</span>
+                    <MapPin size={22} color="#3b82f6" /><span style={statusBadge(req.status)}>{req.status}</span>
                   </div>
                   <h3 style={{ color: 'white', margin: '0 0 0.75rem 0' }}>{req.room}</h3>
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.8rem', borderTop: '1px solid #1e293b', paddingTop: '1.25rem', marginTop: '1.25rem' }}>
-                    <span>{req.date}</span>
-                    <span>{req.time}</span>
+                    <span>{req.date}</span><span>{req.time}</span>
                   </div>
                 </div>
               ))}
+              {filteredMyRequests.length === 0 && <div style={{ color: '#475569', textAlign: 'center', padding: '4rem', gridColumn: '1/-1' }}>No bookings found. Try a different filter or create a new request!</div>}
             </div>
           </div>
         )}
 
-        {view === 'calendar' && isAdmin && <CalendarGrid />}
-        {view === 'inbox' && isAdmin && <RequestInbox />}
-        {view === 'book-multi' && <MultiPurposeForm />}
-        {!isSecretary && view === 'book-lecture' && <LectureRoomForm />}
-        {view === 'users' && isAdmin && <UserManagement />}
-        {view === 'all-bookings' && isAdmin && <BookingRequestsPage />}
-        {view === 'settings' && isAdmin && <SystemSettings />}
-        {view === 'report' && isAdmin && <DailyReport />}
-        {view === 'fixed-schedule' && isAdmin && <FixedSchedule />}
-        {view === 'authority' && isAdmin && <AuthorityManagementPage />}
-        {view === 'final-approvals' && isAdmin && <ManagerApprovalPage />}
+        {view === 'book-multi' && <MultiPurposeForm onSuccess={handleBookingSuccess} />}
+        {!isSecretary && view === 'book-lecture' && <LectureRoomForm onSuccess={handleBookingSuccess} />}
+        {view === 'calendar' && <CalendarGrid />}
+        {view === 'all-bookings' && <BookingRequestsPage />}
+        {view === 'authority' && <AuthorityManagementPage />}
+        {view === 'final-approvals' && <ManagerApprovalPage />}
         {(isAdmin || isVisibilityActivated) && view === 'view-rooms' && <ViewAvailableRoomsPage />}
+        {view === 'users' && <UserManagement />}
+        {view === 'settings' && <SystemSettings />}
       </main>
 
       {showNotifications && <NotificationCenter onClose={() => setShowNotifications(false)} />}
@@ -200,18 +177,27 @@ const DashboardPage: React.FC = () => {
   );
 };
 
-// Styles
+// Sub-Components
+const StatCard: React.FC<any> = ({ label, value, icon, color }) => (
+  <div style={statCardStyle}>
+    <div style={{ background: `${color}15`, color: color, width: '42px', height: '42px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>{icon}</div>
+    <div style={{ fontSize: '1.85rem', fontWeight: 'bold', color: 'white' }}>{value}</div>
+    <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '6px' }}>{label}</div>
+  </div>
+);
+
 const SidebarButton: React.FC<{ icon: any, label: string, active: boolean, onClick: () => void }> = ({ icon, label, active, onClick }) => (
   <button onClick={onClick} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.85rem', padding: '0.9rem 1.25rem', borderRadius: '14px', border: 'none', background: active ? '#3b82f6' : 'transparent', color: active ? 'white' : '#94a3b8', cursor: 'pointer', textAlign: 'left', fontWeight: active ? '700' : '500', transition: '0.2s' }}>
     {React.cloneElement(icon, { size: 18 })} {label}
   </button>
 );
 
+// Styles
 const sidebarStyle: React.CSSProperties = { width: '280px', borderRight: '1px solid #1e293b', padding: '2rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', position: 'sticky', top: 0, height: '100vh', background: '#0f172a', overflowY: 'auto' };
 const sideHeader = { padding: '1.5rem 1rem 0.6rem', fontSize: '0.7rem', color: '#475569', textTransform: 'uppercase' as 'uppercase', fontWeight: '800' };
 const logoutBtn = { marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.9rem 1.25rem', borderRadius: '12px', border: 'none', background: '#ef444415', color: '#ef4444', cursor: 'pointer', fontWeight: 'bold' };
 const notifBtn = { background: '#0f172a', border: '1px solid #1e293b', borderRadius: '14px', padding: '0.75rem', color: '#94a3b8', cursor: 'pointer' };
-const statCard = { background: '#0f172a', padding: '1.75rem', borderRadius: '24px', border: '1px solid #1e293b' };
+const statCardStyle = { background: '#0f172a', padding: '1.75rem', borderRadius: '24px', border: '1px solid #1e293b' };
 const statusBadge = (s: string) => ({ fontSize: '0.7rem', fontWeight: '800', padding: '5px 12px', borderRadius: '10px', background: s === 'Approved' ? '#22c55e15' : s === 'Declined' ? '#ef444415' : '#f59e0b15', color: s === 'Approved' ? '#22c55e' : s === 'Declined' ? '#ef4444' : '#f59e0b', textTransform: 'uppercase' as 'uppercase' });
 const staffFilterBar = { display: 'flex', gap: '1rem', alignItems: 'center' };
 const staffSearchGroup = { display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#1e293b', padding: '0.6rem 1rem', borderRadius: '12px', border: '1px solid #334155' };
