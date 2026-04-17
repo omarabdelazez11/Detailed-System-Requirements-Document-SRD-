@@ -51,7 +51,10 @@ const DashboardPage: React.FC = () => {
 
         <div style={{ marginTop: 'auto' }}>
           <button 
-            onClick={() => auth.signOut()}
+            onClick={() => {
+              sessionStorage.removeItem('mock_user');
+              auth.signOut();
+            }}
             style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderRadius: '8px', border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', width: '100%', textAlign: 'left' }}
           >
             <LogOut size={20} /> Logout

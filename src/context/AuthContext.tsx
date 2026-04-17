@@ -17,6 +17,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check for Mock Bypass (1234/1234)
+    const mockUser = sessionStorage.getItem('mock_user');
+    if (mockUser) {
+      setUser({ uid: 'mock-admin', email: 'admin@aastmt.edu' } as any);
+      setUserProfile({ name: 'Fixed Admin', role: 'BranchManager', status: 'Approved' });
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser) {
         const docRef = doc(db, 'users', authUser.uid);

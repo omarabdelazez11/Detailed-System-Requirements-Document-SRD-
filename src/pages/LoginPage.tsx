@@ -26,12 +26,8 @@ const LoginPage: React.FC = () => {
 
         // Hardcoded bypass for Fixed Admin Account
         if (formData.employeeId === '1234' && formData.password === '1234') {
-          // In a real app, we'd sign in with a fixed admin email
-          // For now, we simulate success or use a placeholder
-          targetEmail = 'admin@aastmt.edu';
-          // await signInWithEmailAndPassword(auth, targetEmail, '1234');
-          alert('Fixed Admin Access Granted (Bypass Mode)');
-          window.location.href = '/dashboard'; // Force redirect for demo
+          sessionStorage.setItem('mock_user', 'true');
+          window.location.reload(); // Refresh to trigger AuthContext mock check
           return;
         }
 
