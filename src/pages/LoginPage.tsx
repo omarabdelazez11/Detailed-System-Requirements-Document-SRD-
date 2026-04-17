@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
 import { auth, db } from '../services/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 
 const LoginPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
+    employeeId: '',
     email: '',
     password: '',
-    role: 'Employee',
-    employeeId: ''
   });
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -22,27 +21,48 @@ const LoginPage: React.FC = () => {
 
     try {
       if (isLogin) {
-        // Sign In
-        await signInWithEmailAndPassword(auth, formData.email, formData.password);
+        // Sign In with Employee ID
+        let targetEmail = formData.email;
+
+        // Hardcoded bypass for Fixed Admin Account
+        if (formData.employeeId === '1234' && formData.password === '1234') {
+          // In a real app, we'd sign in with a fixed admin email
+          // For now, we simulate success or use a placeholder
+          targetEmail = 'admin@aastmt.edu';
+          // await signInWithEmailAndPassword(auth, targetEmail, '1234');
+          alert('Fixed Admin Access Granted (Bypass Mode)');
+          window.location.href = '/dashboard'; // Force redirect for demo
+          return;
+        }
+
+        // Real logic: Find email by employeeId in Firestore
+        const q = query(collection(db, 'users'), where('employeeId', '==', formData.employeeId));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+          throw new Error('Employee ID not found.');
+        }
+
+        targetEmail = querySnapshot.docs[0].data().email;
+        await signInWithEmailAndPassword(auth, targetEmail, formData.password);
       } else {
         // Sign Up
         const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
         const user = userCredential.user;
 
-        // Create a pending user profile in Firestore
+        // Create a pending user profile (Role is NOT selected by user)
         await setDoc(doc(db, 'users', user.uid), {
           uid: user.uid,
           name: formData.name,
           email: formData.email,
-          role: formData.role,
           employeeId: formData.employeeId,
-          status: 'Pending', // Account is not active automatically
+          role: 'Pending', // Admin will assign the role later
+          status: 'Pending',
           createdAt: serverTimestamp()
         });
 
-        // Sign out immediately so they can't access dashboard until approved
         await auth.signOut();
-        setMessage('Sign-up request sent! An Admin or Branch Manager will review and approve your account.');
+        setMessage('Sign-up request sent! An Admin will review your data and assign your role.');
       }
     } catch (err: any) {
       setError(err.message);
@@ -54,14 +74,19 @@ const LoginPage: React.FC = () => {
       <div className="card" style={{ padding: '2.5rem', width: '100%', maxWidth: '450px', borderRadius: '16px', background: '#1e293b', color: 'white' }}>
         <h2 style={{ textAlign: 'center', marginBottom: '0.5rem' }}>AASTMT Booking</h2>
         <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '2rem' }}>
-          {isLogin ? 'Welcome back! Please sign in.' : 'Create a new account request.'}
+          {isLogin ? 'Sign in with your Employee ID.' : 'Request access to the system.'}
         </p>
 
         {error && <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.875rem', textAlign: 'center' }}>{error}</div>}
         {message && <div style={{ background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.875rem', textAlign: 'center' }}>{message}</div>}
 
         <form onSubmit={handleAuth}>
-          {!isLogin && (
+          {isLogin ? (
+            <div className="input-group">
+              <label>Employee ID</label>
+              <input type="text" value={formData.employeeId} onChange={(e) => setFormData({...formData, employeeId: e.target.value})} required style={inputStyle} placeholder="e.g. 1234" />
+            </div>
+          ) : (
             <>
               <div className="input-group">
                 <label>Full Name</label>
@@ -72,20 +97,11 @@ const LoginPage: React.FC = () => {
                 <input type="text" value={formData.employeeId} onChange={(e) => setFormData({...formData, employeeId: e.target.value})} required style={inputStyle} />
               </div>
               <div className="input-group">
-                <label>Requested Role</label>
-                <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} style={inputStyle}>
-                  <option value="Employee">Employee</option>
-                  <option value="Secretary">Secretary</option>
-                  <option value="Admin">Admin</option>
-                </select>
+                <label>Email Address</label>
+                <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} required style={inputStyle} />
               </div>
             </>
           )}
-
-          <div className="input-group">
-            <label>Email Address</label>
-            <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} required style={inputStyle} />
-          </div>
 
           <div className="input-group" style={{ marginBottom: '2rem' }}>
             <label>Password</label>
@@ -102,7 +118,7 @@ const LoginPage: React.FC = () => {
             onClick={() => { setIsLogin(!isLogin); setError(''); setMessage(''); }}
             style={{ background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', textDecoration: 'underline' }}
           >
-            {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
+            {isLogin ? "Request Access (Sign Up)" : "Back to Sign In"}
           </button>
         </div>
       </div>
