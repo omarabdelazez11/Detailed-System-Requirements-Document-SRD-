@@ -1,56 +1,75 @@
 import React, { useState } from 'react';
-import { UserPlus, Shield, Calendar, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { UserPlus, Search, Shield, User, Mail, X, Check, Trash2, Filter, Key, Crown } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+
+interface AppUser { id: string; name: string; email: string; role: string; status: 'Active' | 'Pending'; }
 
 const UserManagement: React.FC = () => {
-  const [users, setUsers] = useState([
-    { id: '1', name: 'Ahmed Ali', email: 'ahmed@aastmt.edu', role: 'Employee', canViewRooms: false },
-    { id: '2', name: 'Sarah Hassan', email: 'sarah@aastmt.edu', role: 'Secretary', canViewRooms: false },
+  const { userProfile } = useAuth();
+  const isManager = userProfile?.role === 'BranchManager';
+  const isAdmin = userProfile?.role === 'Admin';
+
+  const [users, setUsers] = useState<AppUser[]>([
+    { id: '1', name: 'Dr. Ahmed', email: 'ahmed@aast.edu', role: 'Admin', status: 'Active' },
+    { id: '2', name: 'Mona Secretary', email: 'mona@aast.edu', role: 'Secretary', status: 'Active' },
   ]);
 
-  const [delegation, setDelegation] = useState({ primary: '', substitute: '', start: '', end: '' });
+  const [isAdding, setIsAdding] = useState(false);
+  const [newUser, setNewUser] = useState({ name: '', email: '', role: 'Employee' });
 
-  const toggleOverride = (id: string) => {
-    setUsers(users.map(u => u.id === id ? { ...u, canViewRooms: !u.canViewRooms } : u));
+  const handleAddUser = () => {
+    const user: AppUser = { id: Date.now().toString(), ...newUser, status: 'Active' };
+    setUsers([...users, user]);
+    setIsAdding(false);
+    setNewUser({ name: '', email: '', role: 'Employee' });
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      {/* User List & Overrides */}
-      <div className="card" style={{ padding: '1.5rem' }}>
-        <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Shield size={20} color="#3b82f6" /> User Permissions & Overrides
-        </h3>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+    <div className="card" style={{ padding: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+        <div>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: 0 }}>
+            <User size={24} color="#3b82f6" /> Staff Management Console
+          </h2>
+          <p style={{ color: '#64748b', fontSize: '0.85rem' }}>Manage campus personnel, roles, and system access.</p>
+        </div>
+        {(isManager || isAdmin) && (
+          <button onClick={() => setIsAdding(true)} style={addUserBtn}><UserPlus size={18} /> Add New User</button>
+        )}
+      </div>
+
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '1px solid #334155', color: '#94a3b8' }}>
-              <th style={{ padding: '1rem' }}>Name</th>
-              <th style={{ padding: '1rem' }}>Role</th>
-              <th style={{ padding: '1rem' }}>View Available Rooms</th>
+            <tr style={{ borderBottom: '1px solid #334155', color: '#94a3b8', fontSize: '0.8rem' }}>
+              <th style={{ padding: '1rem' }}>Name & Email</th>
+              <th style={{ padding: '1rem' }}>Assigned Role</th>
+              <th style={{ padding: '1rem' }}>Status</th>
+              <th style={{ padding: '1rem', textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {users.map(user => (
-              <tr key={user.id} style={{ borderBottom: '1px solid #334155', color: 'white' }}>
-                <td style={{ padding: '1rem' }}>{user.name}</td>
-                <td style={{ padding: '1rem' }}>{user.role}</td>
+            {users.map(u => (
+              <tr key={u.id} style={{ borderBottom: '1px solid #1e293b' }}>
                 <td style={{ padding: '1rem' }}>
-                  <button 
-                    onClick={() => toggleOverride(user.id)}
-                    style={{ 
-                      background: user.canViewRooms ? '#22c55e' : '#1e293b', 
-                      color: 'white', 
-                      border: '1px solid #334155', 
-                      borderRadius: '20px', 
-                      padding: '4px 12px', 
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    {user.canViewRooms ? <CheckCircle size={14} /> : <XCircle size={14} />}
-                    {user.canViewRooms ? 'Enabled' : 'Disabled'}
-                  </button>
+                  <div style={{ color: 'white', fontWeight: 'bold' }}>{u.name}</div>
+                  <div style={{ color: '#64748b', fontSize: '0.75rem' }}>{u.email}</div>
+                </td>
+                <td style={{ padding: '1rem' }}>
+                  <span style={{ 
+                    padding: '4px 10px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold',
+                    background: u.role === 'Admin' ? '#f59e0b11' : '#3b82f611',
+                    color: u.role === 'Admin' ? '#f59e0b' : '#3b82f6'
+                  }}>
+                    {u.role === 'Admin' && <Crown size={10} style={{ marginRight: '4px' }} />}
+                    {u.role}
+                  </span>
+                </td>
+                <td style={{ padding: '1rem' }}>
+                  <span style={{ color: '#22c55e', fontSize: '0.75rem', fontWeight: 'bold' }}>● {u.status}</span>
+                </td>
+                <td style={{ padding: '1rem', textAlign: 'right' }}>
+                  <button onClick={() => setUsers(users.filter(x => x.id !== u.id))} style={iconBtn}><Trash2 size={18} color="#ef4444" /></button>
                 </td>
               </tr>
             ))}
@@ -58,39 +77,48 @@ const UserManagement: React.FC = () => {
         </table>
       </div>
 
-      {/* Access Delegation */}
-      <div className="card" style={{ padding: '1.5rem' }}>
-        <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Calendar size={20} color="#f59e0b" /> Temporary Access Delegation
-        </h3>
-        <form style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-          <div className="input-group">
-            <label>Primary User (On Leave)</label>
-            <select style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '6px' }}>
-              <option>Select User</option>
-              {users.map(u => <option key={u.id}>{u.name}</option>)}
-            </select>
+      {isAdding && (
+        <div style={modalOverlay}>
+          <div style={modalCard}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
+              <h3 style={{ color: 'white', margin: 0 }}>Onboard New Staff Member</h3>
+              <button onClick={() => setIsAdding(false)} style={iconBtn}><X size={24} /></button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div><label style={labelStyle}>Full Name</label><input value={newUser.name} onChange={e => setNewUser({...newUser, name: e.target.value})} style={inputStyle} /></div>
+              <div><label style={labelStyle}>AAST Email</label><input value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} style={inputStyle} /></div>
+              <div>
+                <label style={labelStyle}>Assign System Role</label>
+                <select value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value})} style={inputStyle}>
+                  <option value="Employee">Employee (Staff)</option>
+                  <option value="Secretary">Secretary</option>
+                  {/* EXCLUSIVE: ONLY BRANCH MANAGER CAN CREATE ADMINS */}
+                  {isManager && <option value="Admin">System Administrator</option>}
+                </select>
+                {!isManager && <p style={{ fontSize: '0.65rem', color: '#ef4444', marginTop: '4px' }}>* Only the Branch Manager can grant Admin status.</p>}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '2.5rem' }}>
+              <button onClick={handleAddUser} style={saveBtn}>Confirm & Register</button>
+              <button onClick={() => setIsAdding(false)} style={cancelBtn}>Discard</button>
+            </div>
           </div>
-          <div className="input-group">
-            <label>Substitute User</label>
-            <select style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '6px' }}>
-              <option>Select User</option>
-              {users.map(u => <option key={u.id}>{u.name}</option>)}
-            </select>
-          </div>
-          <div className="input-group">
-            <label>Start Date</label>
-            <input type="date" style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '6px' }} />
-          </div>
-          <div className="input-group">
-            <label>End Date</label>
-            <input type="date" style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '6px' }} />
-          </div>
-          <button type="button" className="btn btn-primary" style={{ gridColumn: 'span 2' }}>Create Delegation</button>
-        </form>
-      </div>
+        </div>
+      )}
     </div>
   );
 };
+
+// Styles
+const addUserBtn = { background: '#3b82f6', color: 'white', border: 'none', padding: '0.75rem 1.25rem', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' };
+const iconBtn = { background: 'transparent', border: 'none', cursor: 'pointer' };
+const modalOverlay: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1200 };
+const modalCard: React.CSSProperties = { background: '#1e293b', padding: '2.5rem', borderRadius: '24px', border: '1px solid #334155', width: '95%', maxWidth: '500px' };
+const inputStyle = { width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '10px', outline: 'none' };
+const labelStyle = { color: '#64748b', fontSize: '0.75rem', marginBottom: '8px', display: 'block' };
+const saveBtn = { flex: 2, background: '#22c55e', color: 'white', border: 'none', padding: '1rem', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' };
+const cancelBtn = { flex: 1, background: '#334155', color: 'white', border: 'none', padding: '1rem', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' };
 
 export default UserManagement;

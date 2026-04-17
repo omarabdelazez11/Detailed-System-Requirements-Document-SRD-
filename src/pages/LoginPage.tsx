@@ -1,135 +1,106 @@
 import React, { useState } from 'react';
-import { auth, db } from '../services/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { User, Lock, Eye, EyeOff, ShieldCheck, ArrowRight } from 'lucide-react';
 
 const LoginPage: React.FC = () => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({
-    name: '',
-    employeeId: '',
-    email: '',
-    password: '',
-  });
+  const [id, setId] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
+  const { login, isLoading } = useAuth();
+  const navigate = useNavigate();
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setMessage('');
-
     try {
-      if (isLogin) {
-        // Sign In with Employee ID
-        let targetEmail = formData.email;
-
-        // Hardcoded bypass for Fixed Admin Account
-        if (formData.employeeId === '1234' && formData.password === '1234') {
-          sessionStorage.setItem('mock_user', 'true');
-          window.location.reload(); // Refresh to trigger AuthContext mock check
-          return;
-        }
-
-        // Real logic: Find email by employeeId in Firestore
-        const q = query(collection(db, 'users'), where('employeeId', '==', formData.employeeId));
-        const querySnapshot = await getDocs(q);
-        
-        if (querySnapshot.empty) {
-          throw new Error('Employee ID not found.');
-        }
-
-        targetEmail = querySnapshot.docs[0].data().email;
-        await signInWithEmailAndPassword(auth, targetEmail, formData.password);
-      } else {
-        // Sign Up
-        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        const user = userCredential.user;
-
-        // Create a pending user profile (Role is NOT selected by user)
-        await setDoc(doc(db, 'users', user.uid), {
-          uid: user.uid,
-          name: formData.name,
-          email: formData.email,
-          employeeId: formData.employeeId,
-          role: 'Pending', // Admin will assign the role later
-          status: 'Pending',
-          createdAt: serverTimestamp()
-        });
-
-        await auth.signOut();
-        setMessage('Sign-up request sent! An Admin will review your data and assign your role.');
-      }
+      await login(id, password);
+      navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Login failed');
     }
   };
 
   return (
-    <div className="login-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#0f172a', padding: '2rem' }}>
-      <div className="card" style={{ padding: '2.5rem', width: '100%', maxWidth: '450px', borderRadius: '16px', background: '#1e293b', color: 'white' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '0.5rem' }}>AASTMT Booking</h2>
-        <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '2rem' }}>
-          {isLogin ? 'Sign in with your Employee ID.' : 'Request access to the system.'}
-        </p>
+    <div style={pageStyle}>
+      <div style={loginCard}>
+        <div style={headerSection}>
+          <div style={logoCircle}><ShieldCheck size={32} color="#3b82f6" /></div>
+          <h1 style={titleStyle}>AASTMT Management</h1>
+          <p style={subtitleStyle}>Academic Room & Hall Portal</p>
+        </div>
 
-        {error && <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.875rem', textAlign: 'center' }}>{error}</div>}
-        {message && <div style={{ background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.875rem', textAlign: 'center' }}>{message}</div>}
-
-        <form onSubmit={handleAuth}>
-          {isLogin ? (
-            <div className="input-group">
-              <label>Employee ID</label>
-              <input type="text" value={formData.employeeId} onChange={(e) => setFormData({...formData, employeeId: e.target.value})} required style={inputStyle} />
+        <form onSubmit={handleSubmit} style={formStyle}>
+          {error && <div style={errorBox}>{error}</div>}
+          
+          <div style={inputContainer}>
+            <label style={labelStyle}>Staff ID / Username</label>
+            <div style={fieldWrapper}>
+              <User size={18} color="#64748b" style={fieldIcon} />
+              <input 
+                type="text" 
+                value={id} 
+                onChange={(e) => setId(e.target.value)} 
+                placeholder="e.g. admin_aastmt" 
+                style={inputStyle}
+                required
+              />
             </div>
-          ) : (
-            <>
-              <div className="input-group">
-                <label>Full Name</label>
-                <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required style={inputStyle} />
-              </div>
-              <div className="input-group">
-                <label>Employee ID</label>
-                <input type="text" value={formData.employeeId} onChange={(e) => setFormData({...formData, employeeId: e.target.value})} required style={inputStyle} />
-              </div>
-              <div className="input-group">
-                <label>Email Address</label>
-                <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} required style={inputStyle} />
-              </div>
-            </>
-          )}
-
-          <div className="input-group" style={{ marginBottom: '2rem' }}>
-            <label>Password</label>
-            <input type="password" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} required style={inputStyle} />
           </div>
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '1rem' }}>
-            {isLogin ? 'Sign In' : 'Submit Request'}
+          <div style={inputContainer}>
+            <label style={labelStyle}>Secure Password</label>
+            <div style={fieldWrapper}>
+              <Lock size={18} color="#64748b" style={fieldIcon} />
+              <input 
+                type={showPassword ? "text" : "password"} 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                placeholder="••••••••" 
+                style={inputStyle}
+                required
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)} 
+                style={eyeBtn}
+              >
+                {showPassword ? <EyeOff size={18} color="#3b82f6" /> : <Eye size={18} color="#64748b" />}
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" disabled={isLoading} style={submitBtn}>
+            {isLoading ? 'Verifying...' : 'Access Dashboard'} <ArrowRight size={18} />
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.875rem' }}>
-          <button 
-            onClick={() => { setIsLogin(!isLogin); setError(''); setMessage(''); }}
-            style={{ background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', textDecoration: 'underline' }}
-          >
-            {isLogin ? "Request Access (Sign Up)" : "Back to Sign In"}
-          </button>
+        <div style={footerStyle}>
+          <p>Don't have an account? <span style={linkStyle}>Register Staff ID</span></p>
         </div>
       </div>
     </div>
   );
 };
 
-const inputStyle = {
-  width: '100%',
-  padding: '0.75rem',
-  borderRadius: '8px',
-  border: '1px solid #334155',
-  background: '#0f172a',
-  color: 'white',
-  marginTop: '0.25rem'
-};
+// Styles
+const pageStyle: React.CSSProperties = { minHeight: '100vh', background: '#020617', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: 'Inter, system-ui, sans-serif' };
+const loginCard: React.CSSProperties = { background: '#0f172a', padding: '3rem', borderRadius: '32px', width: '100%', maxWidth: '450px', border: '1px solid #1e293b', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' };
+const headerSection: React.CSSProperties = { textAlign: 'center', marginBottom: '2.5rem' };
+const logoCircle = { background: '#3b82f611', width: '64px', height: '64px', borderRadius: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto 1.5rem' };
+const titleStyle = { color: 'white', margin: '0 0 0.5rem 0', fontSize: '1.75rem', fontWeight: '800' };
+const subtitleStyle = { color: '#64748b', margin: 0, fontSize: '0.9rem' };
+const formStyle = { display: 'flex', flexDirection: 'column', gap: '1.5rem' };
+const inputContainer = { display: 'flex', flexDirection: 'column', gap: '0.5rem' };
+const labelStyle = { color: '#94a3b8', fontSize: '0.8rem', fontWeight: '600', marginLeft: '4px' };
+const fieldWrapper = { position: 'relative' as 'relative', display: 'flex', alignItems: 'center' };
+const fieldIcon = { position: 'absolute' as 'absolute', left: '1rem' };
+const inputStyle = { width: '100%', padding: '0.85rem 3rem', background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', color: 'white', fontSize: '0.9rem', outline: 'none' };
+const eyeBtn = { position: 'absolute' as 'absolute', right: '1rem', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' };
+const submitBtn = { marginTop: '1rem', background: '#3b82f6', color: 'white', border: 'none', padding: '1rem', borderRadius: '12px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', transition: '0.2s' };
+const errorBox = { background: '#ef444411', color: '#ef4444', padding: '0.75rem', borderRadius: '8px', fontSize: '0.85rem', textAlign: 'center' as 'center', border: '1px solid #ef444433' };
+const footerStyle = { marginTop: '2.5rem', textAlign: 'center' as 'center', color: '#64748b', fontSize: '0.85rem' };
+const linkStyle = { color: '#3b82f6', fontWeight: 'bold', cursor: 'pointer' };
 
 export default LoginPage;

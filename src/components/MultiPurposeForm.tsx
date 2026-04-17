@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, User, Phone, Briefcase, Mic, Laptop, Video } from 'lucide-react';
+import { Calendar, Clock, User, Phone, Briefcase, Mic, Laptop, Video, MapPin } from 'lucide-react';
+import { AASTMT_SLOTS, AASTMT_DOUBLE_SLOTS, ROOM_DATABASE } from '../utils/timeUtils';
 
 const MultiPurposeForm: React.FC = () => {
   const [formData, setFormData] = useState({
     room: '',
     date: '',
-    fromTime: '',
-    toTime: '',
+    timeSlot: '',
     purpose: '',
     managerName: '',
     managerJob: '',
@@ -17,11 +17,16 @@ const MultiPurposeForm: React.FC = () => {
     videoConf: false
   });
 
+  const timeSlots = [...AASTMT_SLOTS, ...AASTMT_DOUBLE_SLOTS];
+  const rooms = ROOM_DATABASE;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Submitting:', formData);
-    alert('Request submitted for approval!');
+    alert('Multi-Purpose Request submitted for approval!');
   };
+
+  const inputStyle = { width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '6px' };
 
   return (
     <form onSubmit={handleSubmit} className="card" style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
@@ -31,16 +36,15 @@ const MultiPurposeForm: React.FC = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
         <div className="input-group">
-          <label>Requested Room</label>
+          <label><MapPin size={16} style={{ marginRight: '4px' }} /> Requested Room</label>
           <select 
             value={formData.room} 
             onChange={(e) => setFormData({...formData, room: e.target.value})}
             required
-            style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '6px' }}
+            style={inputStyle}
           >
             <option value="">Select Room</option>
-            <option value="Hall A">Hall A</option>
-            <option value="Hall B">Hall B</option>
+            {rooms.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
         </div>
 
@@ -51,31 +55,24 @@ const MultiPurposeForm: React.FC = () => {
             value={formData.date}
             onChange={(e) => setFormData({...formData, date: e.target.value})}
             required
-            style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '6px' }}
+            style={inputStyle}
           />
         </div>
+      </div>
 
-        <div className="input-group">
-          <label><Clock size={16} style={{ marginRight: '4px' }} /> From Time</label>
-          <input 
-            type="time" 
-            value={formData.fromTime}
-            onChange={(e) => setFormData({...formData, fromTime: e.target.value})}
-            required
-            style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '6px' }}
-          />
-        </div>
-
-        <div className="input-group">
-          <label><Clock size={16} style={{ marginRight: '4px' }} /> To Time</label>
-          <input 
-            type="time" 
-            value={formData.toTime}
-            onChange={(e) => setFormData({...formData, toTime: e.target.value})}
-            required
-            style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '6px' }}
-          />
-        </div>
+      <div className="input-group" style={{ marginTop: '1rem' }}>
+        <label><Clock size={16} style={{ marginRight: '4px' }} /> Time Period (90m Slots)</label>
+        <select 
+          value={formData.timeSlot}
+          onChange={(e) => setFormData({...formData, timeSlot: e.target.value})}
+          required
+          style={inputStyle}
+        >
+          <option value="">Select Time Slot</option>
+          {timeSlots.map(slot => (
+            <option key={slot} value={slot}>{slot}</option>
+          ))}
+        </select>
       </div>
 
       <div className="input-group" style={{ marginTop: '1rem' }}>
@@ -84,7 +81,7 @@ const MultiPurposeForm: React.FC = () => {
           value={formData.purpose}
           onChange={(e) => setFormData({...formData, purpose: e.target.value})}
           required
-          style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '6px', minHeight: '80px' }}
+          style={{ ...inputStyle, minHeight: '80px' }}
         />
       </div>
 
@@ -92,16 +89,16 @@ const MultiPurposeForm: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
         <div className="input-group">
           <label><User size={16} style={{ marginRight: '4px' }} /> Name</label>
-          <input type="text" value={formData.managerName} onChange={(e) => setFormData({...formData, managerName: e.target.value})} required style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '6px' }} />
+          <input type="text" value={formData.managerName} onChange={(e) => setFormData({...formData, managerName: e.target.value})} required style={inputStyle} />
         </div>
         <div className="input-group">
           <label><Briefcase size={16} style={{ marginRight: '4px' }} /> Job Title</label>
-          <input type="text" value={formData.managerJob} onChange={(e) => setFormData({...formData, managerJob: e.target.value})} required style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '6px' }} />
+          <input type="text" value={formData.managerJob} onChange={(e) => setFormData({...formData, managerJob: e.target.value})} required style={inputStyle} />
         </div>
       </div>
-      <div className="input-group">
+      <div className="input-group" style={{ marginTop: '1rem' }}>
         <label><Phone size={16} style={{ marginRight: '4px' }} /> Mobile Number</label>
-        <input type="tel" value={formData.managerPhone} onChange={(e) => setFormData({...formData, managerPhone: e.target.value})} required style={{ width: '100%', padding: '0.75rem', background: '#0f172a', border: '1px solid #334155', color: 'white', borderRadius: '6px' }} />
+        <input type="tel" value={formData.managerPhone} onChange={(e) => setFormData({...formData, managerPhone: e.target.value})} required style={inputStyle} />
       </div>
 
       <h3 style={{ margin: '1.5rem 0 1rem', fontSize: '1.1rem', color: '#3b82f6' }}>Technical Requirements</h3>
